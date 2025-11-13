@@ -38,7 +38,7 @@ All tools include comprehensive parameter descriptions, valid value documentatio
 ## Prerequisites
 
 - Python 3.10 or higher
-- [uv](https://github.com/astral-sh/uv) package manager (recommended) or pip
+- [uv](https://github.com/astral-sh/uv) package manager
 - A SonarCloud account with an API token
 - Claude Code or Codex AI client
 
@@ -65,11 +65,8 @@ All tools include comprehensive parameter descriptions, valid value documentatio
 git clone https://github.com/lukleh/mcp-sonarcloud.git
 cd mcp-sonarcloud
 
-# Install with uv (recommended)
+# Install dependencies
 uv sync
-
-# Or with pip
-pip install -e .
 ```
 
 ### 4. Configure Your AI Client
@@ -107,18 +104,10 @@ codex mcp add sonarcloud \
 
 If you've already completed the Quick Start, you can skip to [Usage Examples](#usage-examples).
 
-### Using uv (recommended)
-
 ```bash
 git clone https://github.com/lukleh/mcp-sonarcloud.git
 cd mcp-sonarcloud
 uv sync
-```
-
-### Using pip
-
-```bash
-pip install -e .
 ```
 
 ### Environment Variables
@@ -241,7 +230,7 @@ change_hotspot_status(
 
 **"No module named mcp_sonarcloud"**
 - Make sure you're using the full absolute path in the config
-- Verify you ran `uv pip install -e .` in the project directory
+- Verify you ran `uv sync` in the project directory
 
 **"SONARCLOUD_TOKEN environment variable is required"**
 - Double-check your token is correctly set in the environment variables
