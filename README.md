@@ -66,7 +66,7 @@ git clone https://github.com/lukleh/mcp-sonarcloud.git
 cd mcp-sonarcloud
 
 # Install with uv (recommended)
-uv pip install -e .
+uv sync
 
 # Or with pip
 pip install -e .
@@ -112,7 +112,7 @@ If you've already completed the Quick Start, you can skip to [Usage Examples](#u
 ```bash
 git clone https://github.com/lukleh/mcp-sonarcloud.git
 cd mcp-sonarcloud
-uv pip install -e .
+uv sync
 ```
 
 ### Using pip
