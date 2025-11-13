@@ -100,15 +100,7 @@ codex mcp add sonarcloud \
 1. Restart your AI client
 2. Try asking: "Can you list my SonarCloud projects?"
 
-## Detailed Installation
-
-If you've already completed the Quick Start, you can skip to [Usage Examples](#usage-examples).
-
-```bash
-git clone https://github.com/lukleh/mcp-sonarcloud.git
-cd mcp-sonarcloud
-uv sync
-```
+## Configuration
 
 ### Environment Variables
 
