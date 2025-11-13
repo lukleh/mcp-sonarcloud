@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -165,7 +165,7 @@ class HotspotDetails(BaseModel):
 
 @mcp.tool()
 async def search_my_sonarqube_projects(
-    page: str = Field(default="1", description="Page number to retrieve (1-indexed)")
+    page: Annotated[str, Field(default="1", description="Page number to retrieve (1-indexed)")] = "1"
 ) -> SearchProjectsResponse:
     """Paginated project finder; use when you need keys/names before running other SonarCloud tools.
 
@@ -200,9 +200,9 @@ async def search_my_sonarqube_projects(
 
 @mcp.tool()
 async def show_component(
-    component: str = Field(description="Project key or component key (e.g., 'my-project' or 'my-project:src/main.py')"),
-    branch: Optional[str] = Field(default=None, description="Branch name to retrieve component from (e.g., 'main', 'develop')"),
-    pullRequest: Optional[str] = Field(default=None, description="Pull request ID to retrieve component from (e.g., '123')"),
+    component: Annotated[str, Field(description="Project key or component key (e.g., 'my-project' or 'my-project:src/main.py')")],
+    branch: Annotated[Optional[str], Field(default=None, description="Branch name to retrieve component from (e.g., 'main', 'develop')")] = None,
+    pullRequest: Annotated[Optional[str], Field(default=None, description="Pull request ID to retrieve component from (e.g., '123')")] = None,
 ) -> dict[str, Any]:
     """Return detailed metadata (qualifier, tags, branches) for a specific project/component.
 
@@ -223,25 +223,34 @@ async def show_component(
 
 @mcp.tool()
 async def component_tree(
-    component: str = Field(description="Project key to traverse (e.g., 'my-project')"),
-    qualifiers: Optional[list[str]] = Field(
-        default=None,
-        description="Filter by component qualifiers. Valid values: 'BRC' (branch), 'DIR' (directory), 'FIL' (file), 'TRK' (project), 'UTS' (test file). Example: ['FIL', 'DIR']"
-    ),
-    branch: Optional[str] = Field(default=None, description="Branch name (e.g., 'main')"),
-    pullRequest: Optional[str] = Field(default=None, description="Pull request ID (e.g., '123')"),
-    q: Optional[str] = Field(default=None, description="Search query to filter component names (case-insensitive)"),
-    strategy: Optional[str] = Field(
-        default=None,
-        description="Tree traversal strategy. Valid values: 'all' (default), 'children' (direct children only), 'leaves' (files only)"
-    ),
-    sort_fields: Optional[list[str]] = Field(
-        default=None,
-        description="Fields to sort by. Valid values: 'name', 'path', 'qualifier'. Example: ['name', 'path']"
-    ),
-    asc: Optional[bool] = Field(default=None, description="Sort ascending (true) or descending (false). Defaults to true"),
-    p: int = Field(default=1, description="Page number (1-indexed)"),
-    ps: int = Field(default=100, description="Page size (max 500)"),
+    component: Annotated[str, Field(description="Project key to traverse (e.g., 'my-project')")],
+    qualifiers: Annotated[
+        Optional[list[str]],
+        Field(
+            default=None,
+            description="Filter by component qualifiers. Valid values: 'BRC' (branch), 'DIR' (directory), 'FIL' (file), 'TRK' (project), 'UTS' (test file). Example: ['FIL', 'DIR']"
+        ),
+    ] = None,
+    branch: Annotated[Optional[str], Field(default=None, description="Branch name (e.g., 'main')")] = None,
+    pullRequest: Annotated[Optional[str], Field(default=None, description="Pull request ID (e.g., '123')")] = None,
+    q: Annotated[Optional[str], Field(default=None, description="Search query to filter component names (case-insensitive)")] = None,
+    strategy: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Tree traversal strategy. Valid values: 'all' (default), 'children' (direct children only), 'leaves' (files only)"
+        ),
+    ] = None,
+    sort_fields: Annotated[
+        Optional[list[str]],
+        Field(
+            default=None,
+            description="Fields to sort by. Valid values: 'name', 'path', 'qualifier'. Example: ['name', 'path']"
+        ),
+    ] = None,
+    asc: Annotated[Optional[bool], Field(default=None, description="Sort ascending (true) or descending (false). Defaults to true")] = None,
+    p: Annotated[int, Field(default=1, description="Page number (1-indexed)")] = 1,
+    ps: Annotated[int, Field(default=100, description="Page size (max 500)")] = 100,
 ) -> dict[str, Any]:
     """Traverse modules/files inside a project; supports paging, qualifier filters, and branch/PR context.
 
@@ -276,20 +285,29 @@ async def component_tree(
 
 @mcp.tool()
 async def search_sonar_issues_in_projects(
-    projects: Optional[list[str]] = Field(
-        default=None,
-        description="List of project keys to search in (e.g., ['my-project', 'another-project']). Can be omitted to search across all projects in organization"
-    ),
-    pullRequestId: Optional[str] = Field(
-        default=None,
-        description="Filter issues by pull request ID (e.g., '123')"
-    ),
-    severities: Optional[str] = Field(
-        default=None,
-        description="Comma-separated impact severity levels. Valid values: 'INFO', 'LOW', 'MEDIUM', 'HIGH', 'BLOCKER'. Example: 'HIGH,BLOCKER'"
-    ),
-    p: int = Field(default=1, description="Page number (1-indexed)"),
-    ps: int = Field(default=100, description="Page size (max 500)"),
+    projects: Annotated[
+        Optional[list[str]],
+        Field(
+            default=None,
+            description="List of project keys to search in (e.g., ['my-project', 'another-project']). Can be omitted to search across all projects in organization"
+        ),
+    ] = None,
+    pullRequestId: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Filter issues by pull request ID (e.g., '123')"
+        ),
+    ] = None,
+    severities: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Comma-separated impact severity levels. Valid values: 'INFO', 'LOW', 'MEDIUM', 'HIGH', 'BLOCKER'. Example: 'HIGH,BLOCKER'"
+        ),
+    ] = None,
+    p: Annotated[int, Field(default=1, description="Page number (1-indexed)")] = 1,
+    ps: Annotated[int, Field(default=100, description="Page size (max 500)")] = 100,
 ) -> SearchIssuesResponse:
     """Search issues across one or more projects with optional PR, severity, and pagination controls.
 
@@ -344,15 +362,21 @@ async def search_sonar_issues_in_projects(
 
 @mcp.tool()
 async def list_issue_authors(
-    project: Optional[str] = Field(
-        default=None,
-        description="Project key to filter authors by (e.g., 'my-project'). Omit to search across entire organization"
-    ),
-    q: Optional[str] = Field(
-        default=None,
-        description="Search query to filter author names (case-insensitive partial match)"
-    ),
-    ps: int = Field(default=100, description="Page size - maximum number of authors to return (max 500)"),
+    project: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Project key to filter authors by (e.g., 'my-project'). Omit to search across entire organization"
+        ),
+    ] = None,
+    q: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Search query to filter author names (case-insensitive partial match)"
+        ),
+    ] = None,
+    ps: Annotated[int, Field(default=100, description="Page size - maximum number of authors to return (max 500)")] = 100,
 ) -> dict[str, Any]:
     """Discover SCM author accounts used in your org/project; useful for reviewer pickers or stats.
 
@@ -374,7 +398,7 @@ async def list_issue_authors(
 
 @mcp.tool()
 async def get_issue_changelog(
-    issue: str = Field(description="Issue key to retrieve history for (e.g., 'AXabc123def456')")
+    issue: Annotated[str, Field(description="Issue key to retrieve history for (e.g., 'AXabc123def456')")]
 ) -> dict[str, Any]:
     """Return the change history (status, assignee, severity edits) for the given issue key.
 
@@ -389,15 +413,21 @@ async def get_issue_changelog(
 
 @mcp.tool()
 async def list_issue_tags(
-    project: Optional[str] = Field(
-        default=None,
-        description="Project key to filter tags by (e.g., 'my-project'). Omit to search across entire organization"
-    ),
-    q: Optional[str] = Field(
-        default=None,
-        description="Search query to filter tag names (case-insensitive partial match)"
-    ),
-    ps: int = Field(default=100, description="Page size - maximum number of tags to return (max 500)"),
+    project: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Project key to filter tags by (e.g., 'my-project'). Omit to search across entire organization"
+        ),
+    ] = None,
+    q: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Search query to filter tag names (case-insensitive partial match)"
+        ),
+    ] = None,
+    ps: Annotated[int, Field(default=100, description="Page size - maximum number of tags to return (max 500)")] = 100,
 ) -> dict[str, Any]:
     """List available issue tags (optionally filtered by project or search query) to power tag selectors.
 
@@ -418,26 +448,41 @@ async def list_issue_tags(
 
 @mcp.tool()
 async def get_project_quality_gate_status(
-    analysisId: Optional[str] = Field(
-        default=None,
-        description="Analysis ID to check quality gate for. Get this from analysis results or API"
-    ),
-    projectId: Optional[str] = Field(
-        default=None,
-        description="Numeric project ID (less common, prefer projectKey)"
-    ),
-    projectKey: Optional[str] = Field(
-        default=None,
-        description="Project key (e.g., 'my-project'). Most commonly used identifier"
-    ),
-    branch: Optional[str] = Field(
-        default=None,
-        description="Branch name to check (e.g., 'main', 'develop')"
-    ),
-    pullRequest: Optional[str] = Field(
-        default=None,
-        description="Pull request ID to check (e.g., '123')"
-    ),
+    analysisId: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Analysis ID to check quality gate for. Get this from analysis results or API"
+        ),
+    ] = None,
+    projectId: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Numeric project ID (less common, prefer projectKey)"
+        ),
+    ] = None,
+    projectKey: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Project key (e.g., 'my-project'). Most commonly used identifier"
+        ),
+    ] = None,
+    branch: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Branch name to check (e.g., 'main', 'develop')"
+        ),
+    ] = None,
+    pullRequest: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Pull request ID to check (e.g., '123')"
+        ),
+    ] = None,
 ) -> QualityGateStatus:
     """Check whether a project/branch/PR passed its assigned quality gate and inspect failing conditions.
 
@@ -500,14 +545,20 @@ async def list_quality_gates() -> dict[str, Any]:
 
 @mcp.tool()
 async def show_quality_gate(
-    name: Optional[str] = Field(
-        default=None,
-        description="Quality gate name (e.g., 'Sonar way', 'My Custom Gate'). Either name or gate_id required"
-    ),
-    gate_id: Optional[int] = Field(
-        default=None,
-        description="Quality gate numeric ID. Either name or gate_id required"
-    ),
+    name: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Quality gate name (e.g., 'Sonar way', 'My Custom Gate'). Either name or gate_id required"
+        ),
+    ] = None,
+    gate_id: Annotated[
+        Optional[int],
+        Field(
+            default=None,
+            description="Quality gate numeric ID. Either name or gate_id required"
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """Fetch full gate definition (conditions, allowed actions) so LLMs can explain or compare them.
 
@@ -533,17 +584,23 @@ async def show_quality_gate(
 
 @mcp.tool()
 async def search_quality_gates(
-    gateId: int = Field(description="Quality gate ID to search projects for. Get this from list_quality_gates()"),
-    query: Optional[str] = Field(
-        default=None,
-        description="Search query to filter project names (case-insensitive partial match)"
-    ),
-    page: int = Field(default=1, description="Page number (1-indexed)"),
-    pageSize: int = Field(default=100, description="Page size (max 500)"),
-    selected: Optional[bool] = Field(
-        default=None,
-        description="Filter by association: true=only projects using this gate, false=only projects not using it, null=all projects"
-    ),
+    gateId: Annotated[int, Field(description="Quality gate ID to search projects for. Get this from list_quality_gates()")],
+    query: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Search query to filter project names (case-insensitive partial match)"
+        ),
+    ] = None,
+    page: Annotated[int, Field(default=1, description="Page number (1-indexed)")] = 1,
+    pageSize: Annotated[int, Field(default=100, description="Page size (max 500)")] = 100,
+    selected: Annotated[
+        Optional[bool],
+        Field(
+            default=None,
+            description="Filter by association: true=only projects using this gate, false=only projects not using it, null=all projects"
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """Page through projects associated with a gate; supports filtering by selection status and name.
 
@@ -570,7 +627,7 @@ async def search_quality_gates(
 
 @mcp.tool()
 async def get_quality_gate_by_project(
-    project: str = Field(description="Project key to get quality gate for (e.g., 'my-project')")
+    project: Annotated[str, Field(description="Project key to get quality gate for (e.g., 'my-project')")]
 ) -> dict[str, Any]:
     """Return the gate currently bound to a project so workflows can cross-reference status and rules.
 
@@ -589,21 +646,30 @@ async def get_quality_gate_by_project(
 
 @mcp.tool()
 async def search_hotspots(
-    projectKey: str = Field(description="Project key to search hotspots in (e.g., 'my-project')"),
-    files: Optional[str] = Field(
-        default=None,
-        description="Comma-separated list of file paths to filter by (e.g., 'src/main.java,src/util.java')"
-    ),
-    branch: Optional[str] = Field(
-        default=None,
-        description="Branch name to search (e.g., 'main', 'develop')"
-    ),
-    pullRequest: Optional[str] = Field(
-        default=None,
-        description="Pull request ID to search (e.g., '123')"
-    ),
-    p: int = Field(default=1, description="Page number (1-indexed)"),
-    ps: int = Field(default=100, description="Page size (max 500)"),
+    projectKey: Annotated[str, Field(description="Project key to search hotspots in (e.g., 'my-project')")],
+    files: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Comma-separated list of file paths to filter by (e.g., 'src/main.java,src/util.java')"
+        ),
+    ] = None,
+    branch: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Branch name to search (e.g., 'main', 'develop')"
+        ),
+    ] = None,
+    pullRequest: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Pull request ID to search (e.g., '123')"
+        ),
+    ] = None,
+    p: Annotated[int, Field(default=1, description="Page number (1-indexed)")] = 1,
+    ps: Annotated[int, Field(default=100, description="Page size (max 500)")] = 100,
 ) -> dict[str, Any]:
     """List hotspots for a project with optional file, branch, or PR filters; returns paging + summaries.
 
@@ -659,7 +725,7 @@ async def search_hotspots(
 
 @mcp.tool()
 async def show_hotspot(
-    hotspot: str = Field(description="Hotspot key to retrieve details for (e.g., 'AXabc123def456')")
+    hotspot: Annotated[str, Field(description="Hotspot key to retrieve details for (e.g., 'AXabc123def456')")]
 ) -> HotspotDetails:
     """Return the full hotspot payload (rule, component, author, status) for a specific key.
 
@@ -686,14 +752,20 @@ async def show_hotspot(
 
 @mcp.tool()
 async def change_hotspot_status(
-    hotspot: str = Field(description="Hotspot key to change status for (e.g., 'AXabc123def456')"),
-    status: str = Field(
-        description="New status for the hotspot. Valid values: 'TO_REVIEW' (mark for review), 'REVIEWED' (mark as reviewed, requires resolution parameter)"
-    ),
-    resolution: Optional[str] = Field(
-        default=None,
-        description="Resolution when status='REVIEWED' (REQUIRED for REVIEWED status). Valid values: 'FIXED' (vulnerability has been fixed), 'SAFE' (code is safe, not a vulnerability), 'ACKNOWLEDGED' (risk is acknowledged but accepted). Not used when status='TO_REVIEW'"
-    ),
+    hotspot: Annotated[str, Field(description="Hotspot key to change status for (e.g., 'AXabc123def456')")],
+    status: Annotated[
+        str,
+        Field(
+            description="New status for the hotspot. Valid values: 'TO_REVIEW' (mark for review), 'REVIEWED' (mark as reviewed, requires resolution parameter)"
+        ),
+    ],
+    resolution: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Resolution when status='REVIEWED' (REQUIRED for REVIEWED status). Valid values: 'FIXED' (vulnerability has been fixed), 'SAFE' (code is safe, not a vulnerability), 'ACKNOWLEDGED' (risk is acknowledged but accepted). Not used when status='TO_REVIEW'"
+        ),
+    ] = None,
 ) -> dict[str, Any]:
     """Mark a hotspot TO_REVIEW or REVIEWED (with resolution) so downstream analyses see the new state.
 
