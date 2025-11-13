@@ -1,7 +1,7 @@
 [project]
 name = "mcp-sonarcloud"
 version = "0.1.0"
-description = "MCP server for SonarCloud with hotspot support"
+description = "MCP server for SonarCloud"
 authors = [{name = "Lukas Lehner", email = "lehner.lukas@gmail.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
