@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "sonarcloud": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/mcp-sonarcloud",
+        "run",
+        "mcp-sonarcloud"
+      ],
+      "env": {
+        "SONARCLOUD_TOKEN": "your-sonarcloud-token-here",
+        "SONARCLOUD_ORGANIZATION": "your-org-key"
+      }
+    }
+  }
+}
