@@ -13,10 +13,7 @@ from pydantic import BaseModel, Field
 
 from .runtime_paths import resolve_runtime_paths, RuntimePaths
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
-    import tomli as tomllib
+import tomllib
 
 
 # Initialize MCP server
