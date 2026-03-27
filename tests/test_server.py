@@ -53,7 +53,7 @@ def test_get_config(mock_env):
 
 
 def test_get_config_from_files(isolate_runtime_dirs, monkeypatch):
-    """Test configuration loading from config.toml and secrets.env."""
+    """Test configuration loading from config.toml plus environment token."""
     from mcp_sonarcloud.server import get_config
 
     config_dir = isolate_runtime_dirs["config_dir"]
@@ -66,46 +66,47 @@ def test_get_config_from_files(isolate_runtime_dirs, monkeypatch):
         "timeout_sec = 45\n",
         encoding="utf-8",
     )
-    (config_dir / "secrets.env").write_text(
-        "SONARCLOUD_TOKEN=file-token\n",
-        encoding="utf-8",
-    )
 
     monkeypatch.setenv("MCP_SONARCLOUD_CONFIG_DIR", str(config_dir))
     monkeypatch.setenv("MCP_SONARCLOUD_STATE_DIR", str(state_dir))
     monkeypatch.setenv("MCP_SONARCLOUD_CACHE_DIR", str(cache_dir))
-    monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
+    monkeypatch.setenv("SONARCLOUD_TOKEN", "env-token")
     monkeypatch.delenv("SONARCLOUD_ORGANIZATION", raising=False)
     monkeypatch.delenv("SONARCLOUD_URL", raising=False)
     monkeypatch.delenv("SONARCLOUD_TIMEOUT_SEC", raising=False)
 
     config = get_config()
 
-    assert config["token"] == "file-token"
+    assert config["token"] == "env-token"
     assert config["organization"] == "file-org"
     assert config["base_url"] == "https://sonarqube.example.com"
     assert config["timeout_sec"] == 45.0
 
 
-def test_get_config_from_quoted_secret_file(isolate_runtime_dirs, monkeypatch):
-    """Quoted dotenv-style secrets should be unwrapped before use."""
+def test_get_config_prefers_environment_over_file_config(isolate_runtime_dirs, monkeypatch):
+    """Environment values should override config.toml."""
     from mcp_sonarcloud.server import get_config
 
     config_dir = isolate_runtime_dirs["config_dir"]
 
-    (config_dir / "secrets.env").write_text(
-        'SONARCLOUD_TOKEN="quoted-token"\n',
+    (config_dir / "config.toml").write_text(
+        'organization = "file-org"\n'
+        'base_url = "https://file.example.com"\n'
+        "timeout_sec = 45\n",
         encoding="utf-8",
     )
 
-    monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
-    monkeypatch.delenv("SONARCLOUD_ORGANIZATION", raising=False)
-    monkeypatch.delenv("SONARCLOUD_URL", raising=False)
-    monkeypatch.delenv("SONARCLOUD_TIMEOUT_SEC", raising=False)
+    monkeypatch.setenv("SONARCLOUD_TOKEN", "env-token")
+    monkeypatch.setenv("SONARCLOUD_ORGANIZATION", "env-org")
+    monkeypatch.setenv("SONARCLOUD_URL", "https://env.example.com")
+    monkeypatch.setenv("SONARCLOUD_TIMEOUT_SEC", "60")
 
     config = get_config()
 
-    assert config["token"] == "quoted-token"
+    assert config["token"] == "env-token"
+    assert config["organization"] == "env-org"
+    assert config["base_url"] == "https://env.example.com"
+    assert config["timeout_sec"] == 60.0
 
 
 def test_get_config_missing_token(isolate_runtime_dirs):

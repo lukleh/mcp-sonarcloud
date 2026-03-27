@@ -20,15 +20,6 @@ class RuntimePaths:
     def config_file(self) -> Path:
         return self.config_dir / "config.toml"
 
-    @property
-    def secrets_file(self) -> Path:
-        return self.config_dir / "secrets.env"
-
-    def ensure_directories(self) -> None:
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-
     def render(self) -> str:
         return "\n".join(
             [
@@ -36,7 +27,6 @@ class RuntimePaths:
                 f"state_dir={self.state_dir}",
                 f"cache_dir={self.cache_dir}",
                 f"config_file={self.config_file}",
-                f"secrets_file={self.secrets_file}",
             ]
         )
 

@@ -27,30 +27,6 @@ DEFAULT_TIMEOUT_SEC = 30.0
 _RUNTIME_PATHS: RuntimePaths | None = None
 
 
-# Configuration
-def _normalize_env_value(value: str) -> str:
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-        return value[1:-1]
-    return value
-
-
-def _read_secrets_env(env_path: Path) -> dict[str, str]:
-    if not env_path.exists():
-        return {}
-
-    values: dict[str, str] = {}
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = _normalize_env_value(value.strip())
-        if key:
-            values[key] = value
-    return values
-
-
 def _read_config_toml(config_path: Path) -> dict[str, Any]:
     if not config_path.exists():
         return {}
@@ -63,12 +39,11 @@ def _active_runtime_paths() -> RuntimePaths:
 
 
 def get_config() -> dict[str, Any]:
-    """Get configuration from config.toml, secrets.env, and environment overrides."""
+    """Get configuration from config.toml and environment overrides."""
     runtime_paths = _active_runtime_paths()
     file_config = _read_config_toml(runtime_paths.config_file)
-    secrets = _read_secrets_env(runtime_paths.secrets_file)
 
-    token = os.getenv("SONARCLOUD_TOKEN") or secrets.get("SONARCLOUD_TOKEN")
+    token = os.getenv("SONARCLOUD_TOKEN")
     org = os.getenv("SONARCLOUD_ORGANIZATION") or file_config.get("organization")
     base_url = os.getenv("SONARCLOUD_URL") or file_config.get(
         "base_url", DEFAULT_BASE_URL
@@ -79,9 +54,7 @@ def get_config() -> dict[str, Any]:
     )
 
     if not token:
-        raise ValueError(
-            "SONARCLOUD_TOKEN environment variable is required (or set it in secrets.env)"
-        )
+        raise ValueError("SONARCLOUD_TOKEN environment variable is required")
 
     timeout_sec = float(timeout_raw)
 
@@ -883,7 +856,7 @@ def main():
     parser = argparse.ArgumentParser(description="MCP SonarCloud Server")
     parser.add_argument(
         "--config-dir",
-        help="Directory containing config.toml and secrets.env",
+        help="Directory containing config.toml",
     )
     parser.add_argument(
         "--state-dir",
@@ -911,7 +884,6 @@ def main():
         print(_RUNTIME_PATHS.render())
         return
 
-    _RUNTIME_PATHS.ensure_directories()
     mcp.run()
 
 
