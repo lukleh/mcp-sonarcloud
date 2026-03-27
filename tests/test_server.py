@@ -6,6 +6,26 @@ from unittest.mock import patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolate_runtime_dirs(tmp_path, monkeypatch):
+    """Keep tests isolated from any real home-directory config."""
+    config_dir = tmp_path / "config"
+    state_dir = tmp_path / "state"
+    cache_dir = tmp_path / "cache"
+    config_dir.mkdir()
+    state_dir.mkdir()
+    cache_dir.mkdir()
+
+    monkeypatch.setenv("MCP_SONARCLOUD_CONFIG_DIR", str(config_dir))
+    monkeypatch.setenv("MCP_SONARCLOUD_STATE_DIR", str(state_dir))
+    monkeypatch.setenv("MCP_SONARCLOUD_CACHE_DIR", str(cache_dir))
+    return {
+        "config_dir": config_dir,
+        "state_dir": state_dir,
+        "cache_dir": cache_dir,
+    }
+
+
 @pytest.fixture
 def mock_env():
     """Mock environment variables for testing."""
@@ -29,13 +49,57 @@ def test_get_config(mock_env):
     assert config["token"] == "test-token"
     assert config["organization"] == "test-org"
     assert config["base_url"] == "https://sonarcloud.io"
+    assert config["timeout_sec"] == 30.0
 
 
-def test_get_config_missing_token():
+def test_get_config_from_files(isolate_runtime_dirs, monkeypatch):
+    """Test configuration loading from config.toml and secrets.env."""
+    from mcp_sonarcloud.server import get_config
+
+    config_dir = isolate_runtime_dirs["config_dir"]
+    state_dir = isolate_runtime_dirs["state_dir"]
+    cache_dir = isolate_runtime_dirs["cache_dir"]
+
+    (config_dir / "config.toml").write_text(
+        'base_url = "https://sonarqube.example.com"\n'
+        'organization = "file-org"\n'
+        "timeout_sec = 45\n",
+        encoding="utf-8",
+    )
+    (config_dir / "secrets.env").write_text(
+        "SONARCLOUD_TOKEN=file-token\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("MCP_SONARCLOUD_CONFIG_DIR", str(config_dir))
+    monkeypatch.setenv("MCP_SONARCLOUD_STATE_DIR", str(state_dir))
+    monkeypatch.setenv("MCP_SONARCLOUD_CACHE_DIR", str(cache_dir))
+    monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
+    monkeypatch.delenv("SONARCLOUD_ORGANIZATION", raising=False)
+    monkeypatch.delenv("SONARCLOUD_URL", raising=False)
+    monkeypatch.delenv("SONARCLOUD_TIMEOUT_SEC", raising=False)
+
+    config = get_config()
+
+    assert config["token"] == "file-token"
+    assert config["organization"] == "file-org"
+    assert config["base_url"] == "https://sonarqube.example.com"
+    assert config["timeout_sec"] == 45.0
+
+
+def test_get_config_missing_token(isolate_runtime_dirs):
     """Test configuration fails without token."""
     from mcp_sonarcloud.server import get_config
 
-    with patch.dict(os.environ, {}, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "MCP_SONARCLOUD_CONFIG_DIR": str(isolate_runtime_dirs["config_dir"]),
+            "MCP_SONARCLOUD_STATE_DIR": str(isolate_runtime_dirs["state_dir"]),
+            "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
+        },
+        clear=True,
+    ):
         with pytest.raises(ValueError, match="SONARCLOUD_TOKEN"):
             get_config()
 
@@ -564,11 +628,20 @@ async def test_get_project_quality_gate_status_no_conditions(mock_env, httpx_moc
 # Organization requirement tests
 
 
-def test_require_organization_missing():
+def test_require_organization_missing(isolate_runtime_dirs):
     """Test require_organization fails when SONARCLOUD_ORGANIZATION is not set."""
     from mcp_sonarcloud.server import require_organization
 
-    with patch.dict(os.environ, {"SONARCLOUD_TOKEN": "test-token"}, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "SONARCLOUD_TOKEN": "test-token",
+            "MCP_SONARCLOUD_CONFIG_DIR": str(isolate_runtime_dirs["config_dir"]),
+            "MCP_SONARCLOUD_STATE_DIR": str(isolate_runtime_dirs["state_dir"]),
+            "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
+        },
+        clear=True,
+    ):
         with pytest.raises(
             ValueError, match="requires SONARCLOUD_ORGANIZATION to be set"
         ):
@@ -586,11 +659,20 @@ def test_require_organization_present(mock_env):
 
 
 @pytest.mark.asyncio
-async def test_list_issue_authors_without_organization(httpx_mock):
+async def test_list_issue_authors_without_organization(httpx_mock, isolate_runtime_dirs):
     """Test list_issue_authors fails without organization set."""
     from mcp_sonarcloud.server import list_issue_authors
 
-    with patch.dict(os.environ, {"SONARCLOUD_TOKEN": "test-token"}, clear=True):
+    with patch.dict(
+        os.environ,
+        {
+            "SONARCLOUD_TOKEN": "test-token",
+            "MCP_SONARCLOUD_CONFIG_DIR": str(isolate_runtime_dirs["config_dir"]),
+            "MCP_SONARCLOUD_STATE_DIR": str(isolate_runtime_dirs["state_dir"]),
+            "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
+        },
+        clear=True,
+    ):
         with pytest.raises(
             ValueError, match="list_issue_authors requires SONARCLOUD_ORGANIZATION"
         ):

@@ -1,0 +1,3 @@
+base_url = "https://sonarcloud.io"
+organization = "your-org-key"
+timeout_sec = 30
