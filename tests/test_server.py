@@ -87,6 +87,27 @@ def test_get_config_from_files(isolate_runtime_dirs, monkeypatch):
     assert config["timeout_sec"] == 45.0
 
 
+def test_get_config_from_quoted_secret_file(isolate_runtime_dirs, monkeypatch):
+    """Quoted dotenv-style secrets should be unwrapped before use."""
+    from mcp_sonarcloud.server import get_config
+
+    config_dir = isolate_runtime_dirs["config_dir"]
+
+    (config_dir / "secrets.env").write_text(
+        'SONARCLOUD_TOKEN="quoted-token"\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.delenv("SONARCLOUD_TOKEN", raising=False)
+    monkeypatch.delenv("SONARCLOUD_ORGANIZATION", raising=False)
+    monkeypatch.delenv("SONARCLOUD_URL", raising=False)
+    monkeypatch.delenv("SONARCLOUD_TIMEOUT_SEC", raising=False)
+
+    config = get_config()
+
+    assert config["token"] == "quoted-token"
+
+
 def test_get_config_missing_token(isolate_runtime_dirs):
     """Test configuration fails without token."""
     from mcp_sonarcloud.server import get_config

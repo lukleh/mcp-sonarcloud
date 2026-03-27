@@ -28,6 +28,12 @@ _RUNTIME_PATHS: RuntimePaths | None = None
 
 
 # Configuration
+def _normalize_env_value(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
 def _read_secrets_env(env_path: Path) -> dict[str, str]:
     if not env_path.exists():
         return {}
@@ -39,7 +45,7 @@ def _read_secrets_env(env_path: Path) -> dict[str, str]:
             continue
         key, value = line.split("=", 1)
         key = key.strip()
-        value = value.strip()
+        value = _normalize_env_value(value.strip())
         if key:
             values[key] = value
     return values
