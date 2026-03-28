@@ -1,3 +1,8 @@
+# Base URL for SonarCloud or a self-hosted SonarQube instance.
 base_url = "https://sonarcloud.io"
+
+# Optional default organization key used by organization-scoped endpoints.
 organization = "your-org-key"
+
+# HTTP timeout in seconds.
 timeout_sec = 30

@@ -67,19 +67,21 @@ All tools include comprehensive parameter descriptions, valid value documentatio
 ### 3. Install the Server
 
 ```bash
-# Clone the repository
-git clone https://github.com/lukleh/mcp-sonarcloud.git
-cd mcp-sonarcloud
+# Run the published package without cloning the repository
+uvx mcp-sonarcloud --write-sample-config
 
-# Install dependencies
-uv sync
+# Or install it once and reuse the command directly
+uv tool install mcp-sonarcloud
+mcp-sonarcloud --write-sample-config
 ```
 
 ### 4. Create the Config File
 
+The command above writes a starter config to `~/.config/lukleh/mcp-sonarcloud/config.toml`.
+You can confirm the resolved runtime locations at any time:
+
 ```bash
-mkdir -p ~/.config/lukleh/mcp-sonarcloud
-cp config.toml.example ~/.config/lukleh/mcp-sonarcloud/config.toml
+uvx mcp-sonarcloud --print-paths
 ```
 
 Edit `~/.config/lukleh/mcp-sonarcloud/config.toml`:
@@ -107,7 +109,7 @@ export SONARCLOUD_TOKEN=your-token-here
 claude mcp add sonarcloud \
   --scope {local, user, or project} \
   -e SONARCLOUD_TOKEN=your-token-here \
-  -- uv --directory /absolute/path/to/mcp-sonarcloud run mcp-sonarcloud
+  -- uvx mcp-sonarcloud
 ```
 
 **Codex:**
@@ -115,12 +117,10 @@ claude mcp add sonarcloud \
 ```bash
 codex mcp add sonarcloud \
   --env SONARCLOUD_TOKEN=your-token-here \
-  -- uv --directory /absolute/path/to/mcp-sonarcloud run mcp-sonarcloud
+  -- uvx mcp-sonarcloud
 ```
 
-**Important**: Replace:
-- `/absolute/path/to/mcp-sonarcloud` with the actual full path
-- `your-token-here` with your real SonarCloud token
+**Important**: Replace `your-token-here` with your real SonarCloud token.
 
 ### 7. Restart and Test
 
@@ -152,16 +152,32 @@ You can test the server directly:
 
 ```bash
 # Show the resolved runtime paths
-uv run mcp-sonarcloud --print-paths
+uvx mcp-sonarcloud --print-paths
+
+# Write or refresh the default config file
+uvx mcp-sonarcloud --write-sample-config
+uvx mcp-sonarcloud --write-sample-config --force
 
 # Export the token for local testing
 export SONARCLOUD_TOKEN=your-token-here
 
 # Run the server with the default home-directory config
-uv run mcp-sonarcloud
+uvx mcp-sonarcloud
 
 # Or point at a different config root
-uv run mcp-sonarcloud --config-dir /path/to/config-dir
+uvx mcp-sonarcloud --config-dir /path/to/config-dir
+```
+
+### Local Development
+
+If you want to work on the repository itself:
+
+```bash
+git clone https://github.com/lukleh/mcp-sonarcloud.git
+cd mcp-sonarcloud
+uv sync --extra dev
+uv run pytest -q
+uv run mcp-sonarcloud --print-paths
 ```
 
 ## Usage Examples
@@ -261,9 +277,9 @@ change_hotspot_status(
 
 ### Common Issues
 
-**"No module named mcp_sonarcloud"**
-- Make sure you're using the full absolute path in the config
-- Verify you ran `uv sync` in the project directory
+**"Config file already exists"**
+- `--write-sample-config` will not overwrite an existing file unless you add `--force`
+- Use `uvx mcp-sonarcloud --print-paths` to confirm which config path is active
 
 **"SONARCLOUD_TOKEN environment variable is required"**
 - Double-check your token is correctly set in the environment variables
@@ -275,7 +291,7 @@ change_hotspot_status(
 
 **MCP server not available**
 - Verify the server was added: `claude mcp list` or `codex mcp list`
-- Check that the path to mcp-sonarcloud is correct and absolute
+- Run `uvx mcp-sonarcloud --print-paths` in your shell to confirm the package starts cleanly
 - Try removing and re-adding the server
 - Check your AI client logs for errors
 
@@ -311,6 +327,10 @@ For complete API documentation, see [SONARCLOUD_API_SUPPORT.md](SONARCLOUD_API_S
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Releasing
+
+Maintainer release instructions live in [RELEASING.md](RELEASING.md).
 
 ## License
 

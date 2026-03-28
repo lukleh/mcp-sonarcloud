@@ -30,6 +30,10 @@ class RuntimePaths:
             ]
         )
 
+    def ensure_directories(self) -> None:
+        for path in (self.config_dir, self.state_dir, self.cache_dir):
+            path.mkdir(parents=True, exist_ok=True)
+
 
 def _expand_path(value: str | Path) -> Path:
     return Path(value).expanduser()
