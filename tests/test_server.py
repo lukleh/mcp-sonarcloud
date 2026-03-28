@@ -126,6 +126,48 @@ def test_get_config_missing_token(isolate_runtime_dirs):
             get_config()
 
 
+def test_write_sample_config_creates_runtime_dirs_and_file(isolate_runtime_dirs):
+    """Sample config bootstrap should create package runtime directories."""
+    from mcp_sonarcloud.runtime_paths import resolve_runtime_paths
+    from mcp_sonarcloud.server import SAMPLE_CONFIG_TOML, write_sample_config
+
+    runtime_paths = resolve_runtime_paths()
+    written_path = write_sample_config(runtime_paths)
+
+    assert written_path == runtime_paths.config_file
+    assert runtime_paths.config_dir.is_dir()
+    assert runtime_paths.state_dir.is_dir()
+    assert runtime_paths.cache_dir.is_dir()
+    assert written_path.read_text(encoding="utf-8") == SAMPLE_CONFIG_TOML
+
+
+def test_write_sample_config_requires_force_to_overwrite(isolate_runtime_dirs):
+    """Existing config files should be preserved unless force is requested."""
+    from mcp_sonarcloud.runtime_paths import resolve_runtime_paths
+    from mcp_sonarcloud.server import write_sample_config
+
+    runtime_paths = resolve_runtime_paths()
+    runtime_paths.config_dir.mkdir(parents=True, exist_ok=True)
+    runtime_paths.config_file.write_text('organization = "existing"\n', encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        write_sample_config(runtime_paths)
+
+
+def test_write_sample_config_force_overwrites_existing_file(isolate_runtime_dirs):
+    """Force mode should replace an existing config file with the sample."""
+    from mcp_sonarcloud.runtime_paths import resolve_runtime_paths
+    from mcp_sonarcloud.server import SAMPLE_CONFIG_TOML, write_sample_config
+
+    runtime_paths = resolve_runtime_paths()
+    runtime_paths.config_dir.mkdir(parents=True, exist_ok=True)
+    runtime_paths.config_file.write_text('organization = "existing"\n', encoding="utf-8")
+
+    write_sample_config(runtime_paths, force=True)
+
+    assert runtime_paths.config_file.read_text(encoding="utf-8") == SAMPLE_CONFIG_TOML
+
+
 @pytest.mark.asyncio
 async def test_search_projects(mock_env, httpx_mock):
     """Test search_my_sonarqube_projects tool."""

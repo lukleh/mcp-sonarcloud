@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import os
 from pathlib import Path
+from textwrap import dedent
 from typing import Annotated, Any, Optional
 from urllib.parse import urlencode
 
@@ -11,9 +12,9 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
-from .runtime_paths import resolve_runtime_paths, RuntimePaths
-
 import tomllib
+
+from .runtime_paths import RuntimePaths, resolve_runtime_paths
 
 
 # Initialize MCP server
@@ -24,6 +25,18 @@ DEFAULT_TIMEOUT_SEC = 30.0
 _RUNTIME_PATHS: RuntimePaths | None = None
 VALID_HOTSPOT_STATUSES = {"TO_REVIEW", "REVIEWED"}
 VALID_HOTSPOT_RESOLUTIONS = {"FIXED", "SAFE", "ACKNOWLEDGED"}
+SAMPLE_CONFIG_TOML = dedent(
+    """
+    # Base URL for SonarCloud or a self-hosted SonarQube instance.
+    base_url = "https://sonarcloud.io"
+
+    # Optional default organization key used by organization-scoped endpoints.
+    organization = "your-org-key"
+
+    # HTTP timeout in seconds.
+    timeout_sec = 30
+    """
+).lstrip()
 
 
 def _read_config_toml(config_path: Path) -> dict[str, Any]:
@@ -35,6 +48,20 @@ def _read_config_toml(config_path: Path) -> dict[str, Any]:
 
 def _active_runtime_paths() -> RuntimePaths:
     return _RUNTIME_PATHS or resolve_runtime_paths()
+
+
+def write_sample_config(runtime_paths: RuntimePaths, *, force: bool = False) -> Path:
+    """Write a sample config file for package-based installs."""
+    runtime_paths.ensure_directories()
+
+    config_path = runtime_paths.config_file
+    if config_path.exists() and not force:
+        raise FileExistsError(
+            f"Config file already exists at {config_path}. Re-run with --force to overwrite it."
+        )
+
+    config_path.write_text(SAMPLE_CONFIG_TOML, encoding="utf-8")
+    return config_path
 
 
 def get_config() -> dict[str, Any]:
@@ -894,14 +921,36 @@ def main():
         action="store_true",
         help="Print resolved config/state/cache paths and exit",
     )
+    parser.add_argument(
+        "--write-sample-config",
+        action="store_true",
+        help="Write a sample config.toml to the resolved config path and exit",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite config.toml when used with --write-sample-config",
+    )
 
     args = parser.parse_args()
+
+    if args.force and not args.write_sample_config:
+        parser.error("--force can only be used with --write-sample-config")
 
     _RUNTIME_PATHS = resolve_runtime_paths(
         config_dir=args.config_dir,
         state_dir=args.state_dir,
         cache_dir=args.cache_dir,
     )
+
+    if args.write_sample_config:
+        try:
+            config_path = write_sample_config(_RUNTIME_PATHS, force=args.force)
+        except FileExistsError as exc:
+            parser.error(str(exc))
+        print(f"Wrote sample config to {config_path}")
+        if not args.print_paths:
+            return
 
     if args.print_paths:
         print(_RUNTIME_PATHS.render())
