@@ -277,6 +277,19 @@ async def test_change_hotspot_status_requires_resolution_for_reviewed(mock_env):
 
 
 @pytest.mark.asyncio
+async def test_change_hotspot_status_rejects_invalid_resolution(mock_env):
+    """Reviewed hotspots should reject unsupported resolution values."""
+    from mcp_sonarcloud.server import change_hotspot_status
+
+    with pytest.raises(ValueError, match="resolution must be one of"):
+        await change_hotspot_status(
+            hotspot="AX123",
+            status="REVIEWED",
+            resolution="GARBAGE",
+        )
+
+
+@pytest.mark.asyncio
 async def test_change_hotspot_status_rejects_invalid_status(mock_env):
     """Hotspot status should be validated at the MCP boundary."""
     from mcp_sonarcloud.server import change_hotspot_status
