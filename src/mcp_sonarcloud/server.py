@@ -1,7 +1,9 @@
 """MCP server exposing SonarCloud/SonarQube project, issue, quality gate, and hotspot tools."""
 
+import argparse
 import asyncio
 import os
+from pathlib import Path
 from typing import Annotated, Any, Optional
 from urllib.parse import urlencode
 
@@ -9,25 +11,55 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
+from .runtime_paths import resolve_runtime_paths, RuntimePaths
+
+import tomllib
+
 
 # Initialize MCP server
 mcp = FastMCP("SonarCloud")
 
+DEFAULT_BASE_URL = "https://sonarcloud.io"
+DEFAULT_TIMEOUT_SEC = 30.0
+_RUNTIME_PATHS: RuntimePaths | None = None
 
-# Configuration
-def get_config() -> dict[str, str]:
-    """Get configuration from environment variables."""
+
+def _read_config_toml(config_path: Path) -> dict[str, Any]:
+    if not config_path.exists():
+        return {}
+    with config_path.open("rb") as handle:
+        return tomllib.load(handle)
+
+
+def _active_runtime_paths() -> RuntimePaths:
+    return _RUNTIME_PATHS or resolve_runtime_paths()
+
+
+def get_config() -> dict[str, Any]:
+    """Get configuration from config.toml and environment overrides."""
+    runtime_paths = _active_runtime_paths()
+    file_config = _read_config_toml(runtime_paths.config_file)
+
     token = os.getenv("SONARCLOUD_TOKEN")
-    org = os.getenv("SONARCLOUD_ORGANIZATION")
-    base_url = os.getenv("SONARCLOUD_URL", "https://sonarcloud.io")
+    org = os.getenv("SONARCLOUD_ORGANIZATION") or file_config.get("organization")
+    base_url = os.getenv("SONARCLOUD_URL") or file_config.get(
+        "base_url", DEFAULT_BASE_URL
+    )
+    timeout_raw = os.getenv("SONARCLOUD_TIMEOUT_SEC") or file_config.get(
+        "timeout_sec",
+        DEFAULT_TIMEOUT_SEC,
+    )
 
     if not token:
         raise ValueError("SONARCLOUD_TOKEN environment variable is required")
+
+    timeout_sec = float(timeout_raw)
 
     return {
         "token": token,
         "organization": org,
         "base_url": base_url,
+        "timeout_sec": timeout_sec,
     }
 
 
@@ -37,7 +69,7 @@ async def make_request(
     params: Optional[dict[str, Any]] = None,
     method: str = "GET",
     body: Optional[str] = None,
-    config: Optional[dict[str, str]] = None,
+    config: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Make an HTTP request to SonarCloud API."""
     config = config or get_config()
@@ -59,9 +91,20 @@ async def make_request(
 
     async with httpx.AsyncClient() as client:
         if method == "GET":
-            response = await client.get(url, params=params, headers=headers, timeout=30.0)
+            response = await client.get(
+                url,
+                params=params,
+                headers=headers,
+                timeout=config["timeout_sec"],
+            )
         elif method == "POST":
-            response = await client.post(url, params=params, headers=headers, content=body, timeout=30.0)
+            response = await client.post(
+                url,
+                params=params,
+                headers=headers,
+                content=body,
+                timeout=config["timeout_sec"],
+            )
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -805,6 +848,39 @@ async def change_hotspot_status(
 
 def main():
     """Entry point for the MCP server."""
+    global _RUNTIME_PATHS
+
+    parser = argparse.ArgumentParser(description="MCP SonarCloud Server")
+    parser.add_argument(
+        "--config-dir",
+        help="Directory containing config.toml",
+    )
+    parser.add_argument(
+        "--state-dir",
+        help="Directory reserved for local state files",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        help="Directory reserved for cache files",
+    )
+    parser.add_argument(
+        "--print-paths",
+        action="store_true",
+        help="Print resolved config/state/cache paths and exit",
+    )
+
+    args = parser.parse_args()
+
+    _RUNTIME_PATHS = resolve_runtime_paths(
+        config_dir=args.config_dir,
+        state_dir=args.state_dir,
+        cache_dir=args.cache_dir,
+    )
+
+    if args.print_paths:
+        print(_RUNTIME_PATHS.render())
+        return
+
     mcp.run()
 
 

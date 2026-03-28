@@ -6,6 +6,12 @@
 
 A Model Context Protocol (MCP) server implementation for SonarCloud, providing tools to interact with SonarCloud projects, issues, quality gates, and security hotspots.
 
+> Default layout:
+> - Config: `~/.config/lukleh/mcp-sonarcloud/config.toml`
+> - Credentials: injected via the MCP client or shell environment
+> - State: `~/.local/state/lukleh/mcp-sonarcloud/`
+> - Cache: `~/.cache/lukleh/mcp-sonarcloud/`
+
 ## Features
 
 This MCP server provides 15 comprehensive tools with detailed parameter documentation and examples:
@@ -69,7 +75,31 @@ cd mcp-sonarcloud
 uv sync
 ```
 
-### 4. Configure Your AI Client
+### 4. Create the Config File
+
+```bash
+mkdir -p ~/.config/lukleh/mcp-sonarcloud
+cp config.toml.example ~/.config/lukleh/mcp-sonarcloud/config.toml
+```
+
+Edit `~/.config/lukleh/mcp-sonarcloud/config.toml`:
+
+```toml
+base_url = "https://sonarcloud.io"
+organization = "your-org-key"
+timeout_sec = 30
+```
+
+### 5. Set the Token Environment Variable
+
+Set `SONARCLOUD_TOKEN` in the environment used to launch the server. For local
+shell testing, you can export it directly:
+
+```bash
+export SONARCLOUD_TOKEN=your-token-here
+```
+
+### 6. Configure Your AI Client
 
 **Claude Code:**
 
@@ -77,7 +107,6 @@ uv sync
 claude mcp add sonarcloud \
   --scope {local, user, or project} \
   -e SONARCLOUD_TOKEN=your-token-here \
-  -e SONARCLOUD_ORGANIZATION=your-org-key \
   -- uv --directory /absolute/path/to/mcp-sonarcloud run mcp-sonarcloud
 ```
 
@@ -86,41 +115,53 @@ claude mcp add sonarcloud \
 ```bash
 codex mcp add sonarcloud \
   --env SONARCLOUD_TOKEN=your-token-here \
-  --env SONARCLOUD_ORGANIZATION=your-org-key \
   -- uv --directory /absolute/path/to/mcp-sonarcloud run mcp-sonarcloud
 ```
 
 **Important**: Replace:
 - `/absolute/path/to/mcp-sonarcloud` with the actual full path
-- `your-token-here` with your SonarCloud token
-- `your-org-key` with your organization key
+- `your-token-here` with your real SonarCloud token
 
-### 5. Restart and Test
+### 7. Restart and Test
 
 1. Restart your AI client
 2. Try asking: "Can you list my SonarCloud projects?"
 
 ## Configuration
 
-### Environment Variables
+### Files
 
-The server requires the following environment variables:
+- `config.toml`
+  - `base_url` (optional): SonarCloud or SonarQube base URL
+  - `organization` (optional): SonarCloud organization key
+  - `timeout_sec` (optional): HTTP timeout in seconds
 
-- `SONARCLOUD_TOKEN` (required): Your SonarCloud authentication token
-- `SONARCLOUD_ORGANIZATION` (optional): Your SonarCloud organization key
-- `SONARCLOUD_URL` (optional): SonarCloud base URL (defaults to `https://sonarcloud.io`)
+### Environment Overrides
+
+Environment variables are the source of secrets and also override file values
+when present:
+
+- `SONARCLOUD_TOKEN`
+- `SONARCLOUD_ORGANIZATION`
+- `SONARCLOUD_URL`
+- `SONARCLOUD_TIMEOUT_SEC`
 
 ### Command Line Testing
 
 You can test the server directly:
 
 ```bash
-# Set environment variables
-export SONARCLOUD_TOKEN="your-token"
-export SONARCLOUD_ORGANIZATION="your-org"
+# Show the resolved runtime paths
+uv run mcp-sonarcloud --print-paths
 
-# Run the server
+# Export the token for local testing
+export SONARCLOUD_TOKEN=your-token-here
+
+# Run the server with the default home-directory config
 uv run mcp-sonarcloud
+
+# Or point at a different config root
+uv run mcp-sonarcloud --config-dir /path/to/config-dir
 ```
 
 ## Usage Examples
