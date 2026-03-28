@@ -1,7 +1,7 @@
 # MCP SonarCloud Server
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-1.0+-green.svg)](https://modelcontextprotocol.io)
 
 A Model Context Protocol (MCP) server implementation for SonarCloud, providing tools to interact with SonarCloud projects, issues, quality gates, and security hotspots.
@@ -43,7 +43,7 @@ All tools include comprehensive parameter descriptions, valid value documentatio
 
 ## Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - [uv](https://github.com/astral-sh/uv) package manager
 - A SonarCloud account with an API token
 - Claude Code or Codex AI client
