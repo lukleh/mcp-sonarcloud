@@ -268,6 +268,24 @@ async def test_change_hotspot_status(mock_env, httpx_mock):
 
 
 @pytest.mark.asyncio
+async def test_change_hotspot_status_requires_resolution_for_reviewed(mock_env):
+    """Reviewed hotspots must include a resolution before hitting the API."""
+    from mcp_sonarcloud.server import change_hotspot_status
+
+    with pytest.raises(ValueError, match="resolution is required"):
+        await change_hotspot_status(hotspot="AX123", status="REVIEWED")
+
+
+@pytest.mark.asyncio
+async def test_change_hotspot_status_rejects_invalid_status(mock_env):
+    """Hotspot status should be validated at the MCP boundary."""
+    from mcp_sonarcloud.server import change_hotspot_status
+
+    with pytest.raises(ValueError, match="status must be one of"):
+        await change_hotspot_status(hotspot="AX123", status="BROKEN")
+
+
+@pytest.mark.asyncio
 async def test_list_issue_authors(mock_env, httpx_mock):
     """Test list_issue_authors tool."""
     from mcp_sonarcloud.server import list_issue_authors
@@ -482,6 +500,18 @@ async def test_get_project_quality_gate_status(mock_env, httpx_mock):
     assert result.conditions[0].actualValue == "65.5"
 
 
+@pytest.mark.asyncio
+async def test_get_project_quality_gate_status_requires_identifier(mock_env):
+    """The quality gate status endpoint needs an explicit project or analysis id."""
+    from mcp_sonarcloud.server import get_project_quality_gate_status
+
+    with pytest.raises(
+        ValueError,
+        match="At least one of analysisId, projectId, or projectKey must be provided",
+    ):
+        await get_project_quality_gate_status()
+
+
 # Error handling tests
 
 
@@ -580,6 +610,37 @@ async def test_search_projects_empty_results(mock_env, httpx_mock):
 
 
 @pytest.mark.asyncio
+async def test_search_projects_without_organization_uses_track_qualifier(
+    httpx_mock, isolate_runtime_dirs
+):
+    """Without an organization, the project search should fall back to TRK filtering."""
+    from mcp_sonarcloud.server import search_my_sonarqube_projects
+
+    with patch.dict(
+        os.environ,
+        {
+            "SONARCLOUD_TOKEN": "test-token",
+            "MCP_SONARCLOUD_CONFIG_DIR": str(isolate_runtime_dirs["config_dir"]),
+            "MCP_SONARCLOUD_STATE_DIR": str(isolate_runtime_dirs["state_dir"]),
+            "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
+        },
+        clear=True,
+    ):
+        httpx_mock.add_response(
+            url="https://sonarcloud.io/api/components/search?p=1&qualifiers=TRK",
+            json={
+                "components": [{"key": "project-1", "name": "Project 1"}],
+                "paging": {"pageIndex": 1, "pageSize": 100, "total": 1},
+            },
+        )
+
+        result = await search_my_sonarqube_projects(page="1")
+
+    assert len(result.projects) == 1
+    assert result.projects[0].key == "project-1"
+
+
+@pytest.mark.asyncio
 async def test_search_hotspots_with_optional_fields_missing(mock_env, httpx_mock):
     """Test search_hotspots when optional fields are null."""
     from mcp_sonarcloud.server import search_hotspots
@@ -665,7 +726,8 @@ def test_require_organization_missing(isolate_runtime_dirs):
         clear=True,
     ):
         with pytest.raises(
-            ValueError, match="requires SONARCLOUD_ORGANIZATION to be set"
+            ValueError,
+            match="requires SONARCLOUD_ORGANIZATION to be set via the environment or config.toml",
         ):
             require_organization("test_action")
 

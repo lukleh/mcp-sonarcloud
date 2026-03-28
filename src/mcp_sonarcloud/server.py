@@ -22,6 +22,8 @@ mcp = FastMCP("SonarCloud")
 DEFAULT_BASE_URL = "https://sonarcloud.io"
 DEFAULT_TIMEOUT_SEC = 30.0
 _RUNTIME_PATHS: RuntimePaths | None = None
+VALID_HOTSPOT_STATUSES = {"TO_REVIEW", "REVIEWED"}
+VALID_HOTSPOT_RESOLUTIONS = {"FIXED", "SAFE", "ACKNOWLEDGED"}
 
 
 def _read_config_toml(config_path: Path) -> dict[str, Any]:
@@ -117,12 +119,12 @@ async def make_request(
         return response.json()
 
 
-def require_organization(action_name: str) -> dict[str, str]:
+def require_organization(action_name: str) -> dict[str, Any]:
     """Ensure SONARCLOUD_ORGANIZATION is available for org-scoped endpoints."""
     config = get_config()
     if not config["organization"]:
         raise ValueError(
-            f"{action_name} requires SONARCLOUD_ORGANIZATION to be set in the environment."
+            f"{action_name} requires SONARCLOUD_ORGANIZATION to be set via the environment or config.toml."
         )
     return config
 
@@ -224,7 +226,7 @@ async def search_my_sonarqube_projects(
     if not config["organization"]:
         params["qualifiers"] = "TRK"
 
-    result = await make_request("/api/components/search", params=params)
+    result = await make_request("/api/components/search", params=params, config=config)
 
     projects = [
         Project(key=p["key"], name=p["name"])
@@ -529,7 +531,7 @@ async def get_project_quality_gate_status(
 ) -> QualityGateStatus:
     """Check whether a project/branch/PR passed its assigned quality gate and inspect failing conditions.
 
-    Returns the quality gate status (PASSED, FAILED, ERROR, NONE) and details of any failing conditions.
+    Returns the quality gate status (OK, ERROR, WARN, NONE) and details of any failing conditions.
     At least one of analysisId, projectId, or projectKey must be provided.
 
     Quality gate status values:
@@ -540,6 +542,11 @@ async def get_project_quality_gate_status(
 
     Example: get_project_quality_gate_status(projectKey="my-project", pullRequest="123")
     """
+    if not any([analysisId, projectId, projectKey]):
+        raise ValueError(
+            "At least one of analysisId, projectId, or projectKey must be provided"
+        )
+
     params: dict[str, Any] = {}
 
     if analysisId:
@@ -827,6 +834,25 @@ async def change_hotspot_status(
     - Mark as reviewed and safe: change_hotspot_status(hotspot="AX123", status="REVIEWED", resolution="SAFE")
     - Mark for review: change_hotspot_status(hotspot="AX123", status="TO_REVIEW")
     """
+    if status not in VALID_HOTSPOT_STATUSES:
+        allowed_statuses = ", ".join(sorted(VALID_HOTSPOT_STATUSES))
+        raise ValueError(
+            f"status must be one of: {allowed_statuses}. Got: {status!r}"
+        )
+
+    if status == "REVIEWED":
+        if not resolution:
+            raise ValueError(
+                "resolution is required when status is 'REVIEWED'. "
+                "Valid values: FIXED, SAFE, ACKNOWLEDGED"
+            )
+        if resolution not in VALID_HOTSPOT_RESOLUTIONS:
+            allowed_resolutions = ", ".join(sorted(VALID_HOTSPOT_RESOLUTIONS))
+            raise ValueError(
+                f"resolution must be one of: {allowed_resolutions}. "
+                f"Got: {resolution!r}"
+            )
+
     # Build form data
     body_params = {
         "hotspot": hotspot,
