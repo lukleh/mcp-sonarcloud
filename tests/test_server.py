@@ -1,6 +1,7 @@
 """Tests for MCP SonarCloud server."""
 
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -141,6 +142,15 @@ def test_write_sample_config_creates_runtime_dirs_and_file(isolate_runtime_dirs)
     assert written_path.read_text(encoding="utf-8") == SAMPLE_CONFIG_TOML
 
 
+def test_sample_config_matches_example_file():
+    """The embedded sample config should stay in sync with config.toml.example."""
+    from mcp_sonarcloud.server import SAMPLE_CONFIG_TOML
+
+    example_path = Path(__file__).resolve().parents[1] / "config.toml.example"
+
+    assert SAMPLE_CONFIG_TOML == example_path.read_text(encoding="utf-8")
+
+
 def test_write_sample_config_requires_force_to_overwrite(isolate_runtime_dirs):
     """Existing config files should be preserved unless force is requested."""
     from mcp_sonarcloud.runtime_paths import resolve_runtime_paths
@@ -166,6 +176,52 @@ def test_write_sample_config_force_overwrites_existing_file(isolate_runtime_dirs
     write_sample_config(runtime_paths, force=True)
 
     assert runtime_paths.config_file.read_text(encoding="utf-8") == SAMPLE_CONFIG_TOML
+
+
+def test_main_write_sample_config_and_print_paths_together(
+    isolate_runtime_dirs, monkeypatch, capsys
+):
+    """The CLI should support bootstrapping config and printing paths in one run."""
+    import sys
+
+    from mcp_sonarcloud import server
+
+    config_dir = isolate_runtime_dirs["config_dir"]
+    state_dir = isolate_runtime_dirs["state_dir"]
+    cache_dir = isolate_runtime_dirs["cache_dir"]
+    monkeypatch.setattr(server, "_RUNTIME_PATHS", None)
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mcp-sonarcloud",
+            "--config-dir",
+            str(config_dir),
+            "--state-dir",
+            str(state_dir),
+            "--cache-dir",
+            str(cache_dir),
+            "--write-sample-config",
+            "--print-paths",
+        ],
+    )
+    monkeypatch.setattr(
+        server.mcp,
+        "run",
+        lambda: pytest.fail("mcp.run should not be reached when only printing setup info"),
+    )
+
+    server.main()
+
+    output = capsys.readouterr().out
+
+    assert f"Wrote sample config to {config_dir / 'config.toml'}" in output
+    assert f"config_dir={config_dir}" in output
+    assert f"state_dir={state_dir}" in output
+    assert f"cache_dir={cache_dir}" in output
+    assert f"config_file={config_dir / 'config.toml'}" in output
+    assert (config_dir / "config.toml").read_text(encoding="utf-8") == server.SAMPLE_CONFIG_TOML
 
 
 @pytest.mark.asyncio
