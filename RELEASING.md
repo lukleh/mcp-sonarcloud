@@ -10,7 +10,13 @@ This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI
    - Repository: `mcp-sonarcloud`
    - Workflow: `publish.yml`
    - Environment: `pypi`
-3. In GitHub, create an environment named `pypi` if you want environment protection or manual approvals.
+3. In GitHub, create an environment named `pypi`.
+4. Add required reviewers to the `pypi` environment if you want a manual approval gate before publishing.
+
+Current repository setup:
+- Environment: `pypi`
+- Required reviewer: `lukleh`
+- Self-review: allowed
 
 ## Release steps
 
@@ -23,7 +29,9 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-4. GitHub Actions will:
+4. GitHub Actions will start the `Publish` workflow and pause at the `pypi` environment for approval.
+5. Approve the deployment in the GitHub Actions UI.
+6. After approval, GitHub Actions will:
    - run tests
    - build the wheel and sdist
    - smoke test both artifacts with `uvx`
@@ -33,3 +41,4 @@ git push origin v0.1.0
 
 - The publish workflow validates that the Git tag matches `pyproject.toml`.
 - The smoke tests exercise the packaged CLI by writing a sample config and printing runtime paths from the built artifacts.
+- Because `prevent_self_review` is currently disabled, `lukleh` can approve their own release.
