@@ -2,10 +2,14 @@
 
 This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI trusted publishing.
 
+Current package status:
+- Published to PyPI as `0.1.0`
+
 ## One-time PyPI setup
 
 1. Create the `mcp-sonarcloud` project on PyPI if it does not exist yet.
-2. In PyPI, add a trusted publisher for this repository:
+2. In PyPI, add a trusted publisher for this repository.
+   If the project already exists, use the project's `Manage -> Publishing` page instead of the account-level `Publishing` page.
    - Owner: `lukleh`
    - Repository: `mcp-sonarcloud`
    - Workflow: `publish.yml`
@@ -36,6 +40,24 @@ git push origin v0.1.0
    - build the wheel and sdist
    - smoke test both artifacts with `uvx`
    - publish to PyPI
+
+## Prereleases
+
+This repository supports PyPI prereleases through the same workflow.
+
+Use a PEP 440 prerelease version in `pyproject.toml`, for example:
+- `0.2.0a1`
+- `0.2.0b1`
+- `0.2.0rc1`
+
+Push the matching tag:
+
+```bash
+git tag v0.2.0a1
+git push origin v0.2.0a1
+```
+
+The same `Publish` workflow and manual approval gate will handle the prerelease.
 
 ## Notes
 

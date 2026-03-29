@@ -1,10 +1,18 @@
 """Tests for MCP SonarCloud server."""
 
+from importlib.metadata import version
 import os
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
+
+def test_package_version_matches_distribution_metadata():
+    """The module should expose the installed distribution version."""
+    from mcp_sonarcloud import __version__
+
+    assert __version__ == version("mcp-sonarcloud")
 
 
 @pytest.fixture(autouse=True)
