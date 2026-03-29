@@ -50,14 +50,14 @@ def _active_runtime_paths() -> RuntimePaths:
     return _RUNTIME_PATHS or resolve_runtime_paths()
 
 
-def write_sample_config(runtime_paths: RuntimePaths, *, force: bool = False) -> Path:
+def write_sample_config(runtime_paths: RuntimePaths, *, overwrite: bool = False) -> Path:
     """Write a sample config file for package-based installs."""
     runtime_paths.ensure_directories()
 
     config_path = runtime_paths.config_file
-    if config_path.exists() and not force:
+    if config_path.exists() and not overwrite:
         raise FileExistsError(
-            f"Config file already exists at {config_path}. Re-run with --force to overwrite it."
+            f"Config file already exists at {config_path}. Re-run with --overwrite to replace it."
         )
 
     config_path.write_text(SAMPLE_CONFIG_TOML, encoding="utf-8")
@@ -927,15 +927,15 @@ def main():
         help="Write a sample config.toml to the resolved config path and exit",
     )
     parser.add_argument(
-        "--force",
+        "--overwrite",
         action="store_true",
-        help="Overwrite config.toml when used with --write-sample-config",
+        help="Replace config.toml when used with --write-sample-config",
     )
 
     args = parser.parse_args()
 
-    if args.force and not args.write_sample_config:
-        parser.error("--force can only be used with --write-sample-config")
+    if args.overwrite and not args.write_sample_config:
+        parser.error("--overwrite can only be used with --write-sample-config")
 
     _RUNTIME_PATHS = resolve_runtime_paths(
         config_dir=args.config_dir,
@@ -945,7 +945,7 @@ def main():
 
     if args.write_sample_config:
         try:
-            config_path = write_sample_config(_RUNTIME_PATHS, force=args.force)
+            config_path = write_sample_config(_RUNTIME_PATHS, overwrite=args.overwrite)
         except FileExistsError as exc:
             parser.error(str(exc))
         print(f"Wrote sample config to {config_path}")
