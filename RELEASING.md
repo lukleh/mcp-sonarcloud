@@ -4,6 +4,7 @@ This project is set up for tag-driven PyPI releases with GitHub Actions and PyPI
 
 Current package status:
 - Published to PyPI as `0.1.1`
+- Next planned release from current branch: `0.1.2`
 
 ## Changelog policy
 
