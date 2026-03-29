@@ -25,7 +25,7 @@ dependencies = [
 Homepage = "https://github.com/lukleh/mcp-sonarcloud"
 Repository = "https://github.com/lukleh/mcp-sonarcloud"
 Issues = "https://github.com/lukleh/mcp-sonarcloud/issues"
-Changelog = "https://github.com/lukleh/mcp-sonarcloud/releases"
+Changelog = "https://github.com/lukleh/mcp-sonarcloud/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
