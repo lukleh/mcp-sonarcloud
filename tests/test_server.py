@@ -159,8 +159,8 @@ def test_sample_config_matches_example_file():
     assert SAMPLE_CONFIG_TOML == example_path.read_text(encoding="utf-8")
 
 
-def test_write_sample_config_requires_force_to_overwrite(isolate_runtime_dirs):
-    """Existing config files should be preserved unless force is requested."""
+def test_write_sample_config_requires_overwrite_to_replace(isolate_runtime_dirs):
+    """Existing config files should be preserved unless overwrite is requested."""
     from mcp_sonarcloud.runtime_paths import resolve_runtime_paths
     from mcp_sonarcloud.server import write_sample_config
 
@@ -172,8 +172,8 @@ def test_write_sample_config_requires_force_to_overwrite(isolate_runtime_dirs):
         write_sample_config(runtime_paths)
 
 
-def test_write_sample_config_force_overwrites_existing_file(isolate_runtime_dirs):
-    """Force mode should replace an existing config file with the sample."""
+def test_write_sample_config_overwrite_replaces_existing_file(isolate_runtime_dirs):
+    """Overwrite mode should replace an existing config file with the sample."""
     from mcp_sonarcloud.runtime_paths import resolve_runtime_paths
     from mcp_sonarcloud.server import SAMPLE_CONFIG_TOML, write_sample_config
 
@@ -181,7 +181,7 @@ def test_write_sample_config_force_overwrites_existing_file(isolate_runtime_dirs
     runtime_paths.config_dir.mkdir(parents=True, exist_ok=True)
     runtime_paths.config_file.write_text('organization = "existing"\n', encoding="utf-8")
 
-    write_sample_config(runtime_paths, force=True)
+    write_sample_config(runtime_paths, overwrite=True)
 
     assert runtime_paths.config_file.read_text(encoding="utf-8") == SAMPLE_CONFIG_TOML
 
@@ -230,6 +230,25 @@ def test_main_write_sample_config_and_print_paths_together(
     assert f"cache_dir={cache_dir}" in output
     assert f"config_file={config_dir / 'config.toml'}" in output
     assert (config_dir / "config.toml").read_text(encoding="utf-8") == server.SAMPLE_CONFIG_TOML
+
+
+def test_main_rejects_overwrite_without_write_sample_config(monkeypatch):
+    """Overwrite should only be accepted together with sample-config bootstrap."""
+    import sys
+
+    from mcp_sonarcloud import server
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "mcp-sonarcloud",
+            "--overwrite",
+        ],
+    )
+
+    with pytest.raises(SystemExit):
+        server.main()
 
 
 @pytest.mark.asyncio

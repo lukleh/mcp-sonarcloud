@@ -156,7 +156,7 @@ uvx mcp-sonarcloud --print-paths
 
 # Write or refresh the default config file
 uvx mcp-sonarcloud --write-sample-config
-uvx mcp-sonarcloud --write-sample-config --force
+uvx mcp-sonarcloud --write-sample-config --overwrite
 
 # Export the token for local testing
 export SONARCLOUD_TOKEN=your-token-here
@@ -278,7 +278,7 @@ change_hotspot_status(
 ### Common Issues
 
 **"Config file already exists"**
-- `--write-sample-config` will not overwrite an existing file unless you add `--force`
+- `--write-sample-config` will not replace an existing file unless you add `--overwrite`
 - Use `uvx mcp-sonarcloud --print-paths` to confirm which config path is active
 
 **"SONARCLOUD_TOKEN environment variable is required"**
