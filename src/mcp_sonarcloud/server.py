@@ -1,7 +1,6 @@
 """MCP server exposing SonarCloud/SonarQube project, issue, quality gate, and hotspot tools."""
 
 import argparse
-import asyncio
 import os
 from pathlib import Path
 from textwrap import dedent
