@@ -7,14 +7,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-04-03
+
 ### Added
 
 - Root `CHANGELOG.md` using the Keep a Changelog format and seeded package history.
+- Added Ruff and `ty` as supported development checks for the packaged `src/` tree.
+- Added a repo-specific `AGENTS.md` contributor guide covering layout, commands, and configuration expectations.
 
 ### Changed
 
 - `project.urls.Changelog` now points to the in-repo changelog instead of the generic GitHub releases page.
 - The release flow now treats changelog maintenance as a required step and reuses changelog sections for GitHub release notes.
+- Reworked `RELEASING.md` into an evergreen release checklist with explicit validation, tagging, and publish steps.
 
 ## [0.1.1] - 2026-03-29
 
