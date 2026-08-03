@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-03
+
+### Changed
+
+- Ported the server from the MCP Python SDK's v1 `FastMCP` API to the v2 `MCPServer` API (`from mcp.server.mcpserver import MCPServer`). SDK 2.0.0 removed `mcp.server.fastmcp` outright, so 0.1.4 had to pin below 2; this release runs on the current SDK instead of holding it back.
+- The dependency is now `mcp>=2.0.0,<3`. The cap is deliberate: 2.0.0 removed the entire high-level API surface this server was built on, and an unbounded requirement is exactly what broke every install when it shipped. `<3` keeps the next major rewrite from doing the same.
+- `serverInfo.version` now reports this package's version. Under v1 it reported the *SDK* version (for example `1.29.0`), which was misleading; SDK 2 defaults it to an empty string, so the real version is now passed explicitly.
+
+The MCP tool surface is unchanged: `tools/list` is byte-identical to 0.1.4 across all 15 tools, verified by diffing the built wheel's output against a 0.1.4 baseline.
+
 ## [0.1.4] - 2026-08-03
 
 ### Changed

@@ -8,16 +8,17 @@ from typing import Annotated, Any, Optional
 from urllib.parse import urlencode
 
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from pydantic import BaseModel, Field
 
 import tomllib
 
+from . import __version__
 from .runtime_paths import RuntimePaths, resolve_runtime_paths
 
 
 # Initialize MCP server
-mcp = FastMCP("SonarCloud")
+mcp = MCPServer("SonarCloud", version=__version__)
 
 DEFAULT_BASE_URL = "https://sonarcloud.io"
 DEFAULT_TIMEOUT_SEC = 30.0
