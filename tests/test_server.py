@@ -1,7 +1,7 @@
 """Tests for MCP SonarCloud server."""
 
-from importlib.metadata import version
 import os
+from importlib.metadata import version
 from pathlib import Path
 from unittest.mock import patch
 
@@ -130,9 +130,8 @@ def test_get_config_missing_token(isolate_runtime_dirs):
             "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
         },
         clear=True,
-    ):
-        with pytest.raises(ValueError, match="SONARCLOUD_TOKEN"):
-            get_config()
+    ), pytest.raises(ValueError, match="SONARCLOUD_TOKEN"):
+        get_config()
 
 
 def test_write_sample_config_creates_runtime_dirs_and_file(isolate_runtime_dirs):
@@ -656,8 +655,9 @@ async def test_get_project_quality_gate_status_requires_identifier(mock_env):
 @pytest.mark.asyncio
 async def test_make_request_401_unauthorized(mock_env, httpx_mock):
     """Test handling of 401 Unauthorized error."""
-    from mcp_sonarcloud.server import search_my_sonarqube_projects
     import httpx
+
+    from mcp_sonarcloud.server import search_my_sonarqube_projects
 
     httpx_mock.add_response(
         url="https://sonarcloud.io/api/components/search?p=1&organization=test-org",
@@ -674,8 +674,9 @@ async def test_make_request_401_unauthorized(mock_env, httpx_mock):
 @pytest.mark.asyncio
 async def test_make_request_404_not_found(mock_env, httpx_mock):
     """Test handling of 404 Not Found error."""
-    from mcp_sonarcloud.server import show_hotspot
     import httpx
+
+    from mcp_sonarcloud.server import show_hotspot
 
     httpx_mock.add_response(
         url="https://sonarcloud.io/api/hotspots/show?hotspot=INVALID&organization=test-org",
@@ -692,8 +693,9 @@ async def test_make_request_404_not_found(mock_env, httpx_mock):
 @pytest.mark.asyncio
 async def test_make_request_500_server_error(mock_env, httpx_mock):
     """Test handling of 500 Internal Server Error."""
-    from mcp_sonarcloud.server import list_quality_gates
     import httpx
+
+    from mcp_sonarcloud.server import list_quality_gates
 
     httpx_mock.add_response(
         url="https://sonarcloud.io/api/qualitygates/list?organization=test-org",
@@ -710,8 +712,9 @@ async def test_make_request_500_server_error(mock_env, httpx_mock):
 @pytest.mark.asyncio
 async def test_make_request_403_forbidden(mock_env, httpx_mock):
     """Test handling of 403 Forbidden error."""
-    from mcp_sonarcloud.server import get_quality_gate_by_project
     import httpx
+
+    from mcp_sonarcloud.server import get_quality_gate_by_project
 
     httpx_mock.add_response(
         url="https://sonarcloud.io/api/qualitygates/get_by_project?project=private-project&organization=test-org",
@@ -853,21 +856,23 @@ def test_require_organization_missing(isolate_runtime_dirs):
     """Test require_organization fails when SONARCLOUD_ORGANIZATION is not set."""
     from mcp_sonarcloud.server import require_organization
 
-    with patch.dict(
-        os.environ,
-        {
-            "SONARCLOUD_TOKEN": "test-token",
-            "MCP_SONARCLOUD_CONFIG_DIR": str(isolate_runtime_dirs["config_dir"]),
-            "MCP_SONARCLOUD_STATE_DIR": str(isolate_runtime_dirs["state_dir"]),
-            "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
-        },
-        clear=True,
-    ):
-        with pytest.raises(
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "SONARCLOUD_TOKEN": "test-token",
+                "MCP_SONARCLOUD_CONFIG_DIR": str(isolate_runtime_dirs["config_dir"]),
+                "MCP_SONARCLOUD_STATE_DIR": str(isolate_runtime_dirs["state_dir"]),
+                "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
+            },
+            clear=True,
+        ),
+        pytest.raises(
             ValueError,
             match="requires SONARCLOUD_ORGANIZATION to be set via the environment or config.toml",
-        ):
-            require_organization("test_action")
+        ),
+    ):
+        require_organization("test_action")
 
 
 def test_require_organization_present(mock_env):
@@ -894,11 +899,10 @@ async def test_list_issue_authors_without_organization(httpx_mock, isolate_runti
             "MCP_SONARCLOUD_CACHE_DIR": str(isolate_runtime_dirs["cache_dir"]),
         },
         clear=True,
+    ), pytest.raises(
+        ValueError, match="list_issue_authors requires SONARCLOUD_ORGANIZATION"
     ):
-        with pytest.raises(
-            ValueError, match="list_issue_authors requires SONARCLOUD_ORGANIZATION"
-        ):
-            await list_issue_authors()
+        await list_issue_authors()
 
 
 # Additional parameter combination tests

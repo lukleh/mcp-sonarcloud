@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Dev tooling: CI now runs `ruff check src tests` in the test and publish
+  workflows (previously no linter ran in CI; ruff was only a manual
+  RELEASING.md gate), and the tree was moved to ruff 0.16's widened default
+  rule set, with ruff capped to the 0.16 minor (`ruff>=0.16,<0.17`) so
+  relocks cannot change lint behavior silently. Code modernized accordingly
+  (PEP 604 optionals, sorted imports, combined `with` statements); no
+  behavior changes and no rule opt-outs needed.
+
 ## [0.2.0] - 2026-08-03
 
 ### Changed
