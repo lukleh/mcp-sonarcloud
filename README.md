@@ -68,10 +68,10 @@ All tools include comprehensive parameter descriptions, valid value documentatio
 
 ```bash
 # Run the published package without cloning the repository
-uvx mcp-sonarcloud --write-sample-config
+uvx mcp-sonarcloud@latest --write-sample-config
 
 # Or install it once and reuse the command directly
-uv tool install mcp-sonarcloud
+uv tool install mcp-sonarcloud@latest
 mcp-sonarcloud --write-sample-config
 ```
 
@@ -81,7 +81,7 @@ The command above writes a starter config to `~/.config/lukleh/mcp-sonarcloud/co
 You can confirm the resolved runtime locations at any time:
 
 ```bash
-uvx mcp-sonarcloud --print-paths
+uvx mcp-sonarcloud@latest --print-paths
 ```
 
 Edit `~/.config/lukleh/mcp-sonarcloud/config.toml`:
@@ -109,7 +109,7 @@ export SONARCLOUD_TOKEN=your-token-here
 claude mcp add sonarcloud \
   --scope {local, user, or project} \
   -e SONARCLOUD_TOKEN=your-token-here \
-  -- uvx mcp-sonarcloud
+  -- uvx mcp-sonarcloud@latest
 ```
 
 **Codex:**
@@ -117,7 +117,7 @@ claude mcp add sonarcloud \
 ```bash
 codex mcp add sonarcloud \
   --env SONARCLOUD_TOKEN=your-token-here \
-  -- uvx mcp-sonarcloud
+  -- uvx mcp-sonarcloud@latest
 ```
 
 **Important**: Replace `your-token-here` with your real SonarCloud token.
@@ -152,20 +152,20 @@ You can test the server directly:
 
 ```bash
 # Show the resolved runtime paths
-uvx mcp-sonarcloud --print-paths
+uvx mcp-sonarcloud@latest --print-paths
 
 # Write or refresh the default config file
-uvx mcp-sonarcloud --write-sample-config
-uvx mcp-sonarcloud --write-sample-config --overwrite
+uvx mcp-sonarcloud@latest --write-sample-config
+uvx mcp-sonarcloud@latest --write-sample-config --overwrite
 
 # Export the token for local testing
 export SONARCLOUD_TOKEN=your-token-here
 
 # Run the server with the default home-directory config
-uvx mcp-sonarcloud
+uvx mcp-sonarcloud@latest
 
 # Or point at a different config root
-uvx mcp-sonarcloud --config-dir /path/to/config-dir
+uvx mcp-sonarcloud@latest --config-dir /path/to/config-dir
 ```
 
 ### Local Development
@@ -279,7 +279,7 @@ change_hotspot_status(
 
 **"Config file already exists"**
 - `--write-sample-config` will not replace an existing file unless you add `--overwrite`
-- Use `uvx mcp-sonarcloud --print-paths` to confirm which config path is active
+- Use `uvx mcp-sonarcloud@latest --print-paths` to confirm which config path is active
 
 **"SONARCLOUD_TOKEN environment variable is required"**
 - Double-check your token is correctly set in the environment variables
@@ -291,7 +291,7 @@ change_hotspot_status(
 
 **MCP server not available**
 - Verify the server was added: `claude mcp list` or `codex mcp list`
-- Run `uvx mcp-sonarcloud --print-paths` in your shell to confirm the package starts cleanly
+- Run `uvx mcp-sonarcloud@latest --print-paths` in your shell to confirm the package starts cleanly
 - Try removing and re-adding the server
 - Check your AI client logs for errors
 
