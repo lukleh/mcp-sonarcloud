@@ -4,7 +4,8 @@
 
 ### Architecture
 
-This MCP server is built using the FastMCP framework from the MCP Python SDK. The architecture follows a simple, straightforward approach:
+This MCP server is built using the `MCPServer` high-level API from the MCP Python SDK (v2; the
+successor to v1's `FastMCP`). The architecture follows a simple, straightforward approach:
 
 ```
 src/mcp_sonarcloud/

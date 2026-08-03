@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`src/mcp_sonarcloud/server.py` contains the FastMCP server, request helpers, Pydantic response models, and the CLI entry point. Runtime-path resolution is isolated in `src/mcp_sonarcloud/runtime_paths.py`, and package metadata lives in `src/mcp_sonarcloud/__init__.py`. Tests are concentrated in `tests/test_server.py`, while `README.md`, `DEVELOPMENT.md`, and `SONARCLOUD_API_SUPPORT.md` document the public API surface and maintenance expectations.
+`src/mcp_sonarcloud/server.py` contains the MCPServer server, request helpers, Pydantic response models, and the CLI entry point. Runtime-path resolution is isolated in `src/mcp_sonarcloud/runtime_paths.py`, and package metadata lives in `src/mcp_sonarcloud/__init__.py`. Tests are concentrated in `tests/test_server.py`, while `README.md`, `DEVELOPMENT.md`, and `SONARCLOUD_API_SUPPORT.md` document the public API surface and maintenance expectations.
 
 ## Build, Test, and Development Commands
 - `uv sync --extra dev` installs runtime and development dependencies.
