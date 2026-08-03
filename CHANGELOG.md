@@ -9,12 +9,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Dev tooling: pinned the ruff rule set explicitly (`select = ["E4", "E7",
-  "E9", "F"]`, the implicit defaults of the locked ruff 0.15.10) so a future
-  relock to ruff 0.16+ — which widened the implicit defaults — cannot change
-  lint coverage silently, and CI now runs `ruff check src tests` in the test
-  and publish workflows (previously no linter ran in CI; ruff was only a
-  manual RELEASING.md gate).
+- Dev tooling: CI now runs `ruff check src tests` in the test and publish
+  workflows (previously no linter ran in CI; ruff was only a manual
+  RELEASING.md gate), and the tree was moved to ruff 0.16's widened default
+  rule set, with ruff capped to the 0.16 minor (`ruff>=0.16,<0.17`) so
+  relocks cannot change lint behavior silently. Code modernized accordingly
+  (PEP 604 optionals, sorted imports, combined `with` statements); no
+  behavior changes and no rule opt-outs needed.
 
 ## [0.2.0] - 2026-08-03
 
