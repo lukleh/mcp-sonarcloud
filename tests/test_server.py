@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from mcp.server.mcpserver.exceptions import ToolError
 
 
 def test_package_version_matches_distribution_metadata():
@@ -396,7 +397,7 @@ async def test_change_hotspot_status_requires_resolution_for_reviewed(mock_env):
     """Reviewed hotspots must include a resolution before hitting the API."""
     from mcp_sonarcloud.server import change_hotspot_status
 
-    with pytest.raises(ValueError, match="resolution is required"):
+    with pytest.raises(ToolError, match="resolution is required"):
         await change_hotspot_status(hotspot="AX123", status="REVIEWED")
 
 
@@ -405,7 +406,7 @@ async def test_change_hotspot_status_rejects_invalid_resolution(mock_env):
     """Reviewed hotspots should reject unsupported resolution values."""
     from mcp_sonarcloud.server import change_hotspot_status
 
-    with pytest.raises(ValueError, match="resolution must be one of"):
+    with pytest.raises(ToolError, match="resolution must be one of"):
         await change_hotspot_status(
             hotspot="AX123",
             status="REVIEWED",
@@ -418,7 +419,7 @@ async def test_change_hotspot_status_rejects_invalid_status(mock_env):
     """Hotspot status should be validated at the MCP boundary."""
     from mcp_sonarcloud.server import change_hotspot_status
 
-    with pytest.raises(ValueError, match="status must be one of"):
+    with pytest.raises(ToolError, match="status must be one of"):
         await change_hotspot_status(hotspot="AX123", status="BROKEN")
 
 
@@ -511,7 +512,7 @@ async def test_show_quality_gate_requires_identifier(mock_env):
     """Ensure show_quality_gate validates input."""
     from mcp_sonarcloud.server import show_quality_gate
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ToolError):
         await show_quality_gate()
 
 
@@ -643,13 +644,14 @@ async def test_get_project_quality_gate_status_requires_identifier(mock_env):
     from mcp_sonarcloud.server import get_project_quality_gate_status
 
     with pytest.raises(
-        ValueError,
+        ToolError,
         match="At least one of analysisId, projectId, or projectKey must be provided",
     ):
         await get_project_quality_gate_status()
 
 
-# Error handling tests
+# Error handling tests: HTTP errors reach the caller as ToolError with the
+# original httpx exception as the cause.
 
 
 @pytest.mark.asyncio
@@ -665,10 +667,12 @@ async def test_make_request_401_unauthorized(mock_env, httpx_mock):
         json={"errors": [{"msg": "Unauthorized"}]},
     )
 
-    with pytest.raises(httpx.HTTPStatusError) as exc_info:
+    with pytest.raises(ToolError) as exc_info:
         await search_my_sonarqube_projects(page="1")
 
-    assert exc_info.value.response.status_code == 401
+    cause = exc_info.value.__cause__
+    assert isinstance(cause, httpx.HTTPStatusError)
+    assert cause.response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -684,10 +688,12 @@ async def test_make_request_404_not_found(mock_env, httpx_mock):
         json={"errors": [{"msg": "Hotspot not found"}]},
     )
 
-    with pytest.raises(httpx.HTTPStatusError) as exc_info:
+    with pytest.raises(ToolError) as exc_info:
         await show_hotspot(hotspot="INVALID")
 
-    assert exc_info.value.response.status_code == 404
+    cause = exc_info.value.__cause__
+    assert isinstance(cause, httpx.HTTPStatusError)
+    assert cause.response.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -703,10 +709,12 @@ async def test_make_request_500_server_error(mock_env, httpx_mock):
         json={"errors": [{"msg": "Internal server error"}]},
     )
 
-    with pytest.raises(httpx.HTTPStatusError) as exc_info:
+    with pytest.raises(ToolError) as exc_info:
         await list_quality_gates()
 
-    assert exc_info.value.response.status_code == 500
+    cause = exc_info.value.__cause__
+    assert isinstance(cause, httpx.HTTPStatusError)
+    assert cause.response.status_code == 500
 
 
 @pytest.mark.asyncio
@@ -722,10 +730,12 @@ async def test_make_request_403_forbidden(mock_env, httpx_mock):
         json={"errors": [{"msg": "Insufficient privileges"}]},
     )
 
-    with pytest.raises(httpx.HTTPStatusError) as exc_info:
+    with pytest.raises(ToolError) as exc_info:
         await get_quality_gate_by_project(project="private-project")
 
-    assert exc_info.value.response.status_code == 403
+    cause = exc_info.value.__cause__
+    assert isinstance(cause, httpx.HTTPStatusError)
+    assert cause.response.status_code == 403
 
 
 # Edge case tests
@@ -900,7 +910,7 @@ async def test_list_issue_authors_without_organization(httpx_mock, isolate_runti
         },
         clear=True,
     ), pytest.raises(
-        ValueError, match="list_issue_authors requires SONARCLOUD_ORGANIZATION"
+        ToolError, match="list_issue_authors requires SONARCLOUD_ORGANIZATION"
     ):
         await list_issue_authors()
 

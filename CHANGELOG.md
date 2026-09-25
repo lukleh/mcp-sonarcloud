@@ -7,6 +7,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tool failures report their reason again under mcp 2.1 and later. The SDK
+  now reports any exception other than `ToolError` as the generic
+  `Error executing tool <name>`, which hid a missing token or organization,
+  rejected arguments, HTTP errors from SonarCloud, and unreachable hosts.
+  Anticipated failures (`ValueError`, `httpx.HTTPError`, `OSError`) are now
+  re-raised as `ToolError` at the tool boundary; programming errors keep the
+  SDK's crash handling. Calling a tool function directly now raises
+  `ToolError` with the original exception as `__cause__`. The dev lockfile
+  now resolves mcp 2.2.0 so the test suite exercises it.
+
 ### Changed
 
 - Dev tooling: CI now runs `ruff check src tests` in the test and publish
