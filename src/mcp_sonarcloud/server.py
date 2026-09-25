@@ -1,15 +1,19 @@
 """MCP server exposing SonarCloud/SonarQube project, issue, quality gate, and hotspot tools."""
 
 import argparse
+import functools
 import os
 import tomllib
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from textwrap import dedent
-from typing import Annotated, Any
+from typing import Annotated, Any, ParamSpec, TypeVar
 from urllib.parse import urlencode
 
 import httpx
+from mcp import MCPError
 from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, Field
 
 from . import __version__
@@ -23,6 +27,18 @@ DEFAULT_TIMEOUT_SEC = 30.0
 _RUNTIME_PATHS: RuntimePaths | None = None
 VALID_HOTSPOT_STATUSES = {"TO_REVIEW", "REVIEWED"}
 VALID_HOTSPOT_RESOLUTIONS = {"FIXED", "SAFE", "ACKNOWLEDGED"}
+# Exception types the tools raise for failures the caller can act on: a missing
+# token or organization, a rejected argument, or an unreadable config value
+# (ValueError), an HTTP error status or transport failure from SonarCloud
+# (httpx.HTTPError), or a config file that cannot be read (OSError). ValueError
+# also covers pydantic ValidationError and JSON decoding errors, so a malformed
+# response is forwarded to the caller rather than logged as a crash. Any other
+# exception is treated as a bug and stays a crash.
+ANTICIPATED_TOOL_ERRORS: tuple[type[Exception], ...] = (
+    ValueError,
+    httpx.HTTPError,
+    OSError,
+)
 SAMPLE_CONFIG_TOML = dedent(
     """
     # Base URL for SonarCloud or a self-hosted SonarQube instance.
@@ -90,6 +106,43 @@ def get_config() -> dict[str, Any]:
     }
 
 
+def _sonar_error_messages(response: httpx.Response) -> list[str]:
+    """Return the ``errors[].msg`` texts SonarCloud puts in an error response body."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return []
+    errors = payload.get("errors") if isinstance(payload, dict) else None
+    if not isinstance(errors, list):
+        return []
+    return [
+        error["msg"]
+        for error in errors
+        if isinstance(error, dict) and isinstance(error.get("msg"), str)
+    ]
+
+
+def _raise_for_status(response: httpx.Response) -> None:
+    """Raise ``httpx.HTTPStatusError`` carrying SonarCloud's own reason when it gives one.
+
+    httpx's default message is only the status line and URL. SonarCloud explains
+    the failure in the body (an unknown component, a rejected parameter value),
+    so that text becomes the message the caller sees.
+    """
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        messages = _sonar_error_messages(response)
+        if not messages:
+            raise
+        raise httpx.HTTPStatusError(
+            f"SonarCloud returned HTTP {response.status_code} "
+            f"{response.reason_phrase}: {'; '.join(messages)}",
+            request=exc.request,
+            response=response,
+        ) from exc
+
+
 # HTTP Client helper
 async def make_request(
     endpoint: str,
@@ -135,7 +188,7 @@ async def make_request(
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
-        response.raise_for_status()
+        _raise_for_status(response)
 
         # Handle empty responses (common for successful POST operations)
         if not response.content or len(response.content) == 0:
@@ -231,9 +284,42 @@ class HotspotDetails(BaseModel):
     canChangeStatus: bool
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def surface_tool_errors(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+    """Report an anticipated tool failure to the caller with its message.
+
+    Since mcp 2.1 the SDK treats any exception other than ``ToolError`` (or a
+    protocol-level ``MCPError``) as a crash and replaces its text with the
+    generic ``Error executing tool <name>``. The failures listed in
+    ``ANTICIPATED_TOOL_ERRORS`` are re-raised as ``ToolError`` so the caller
+    sees the reason. Any other exception keeps the SDK's crash handling: the
+    text stays on the server, logged with its traceback. Because ``ValueError``
+    is in the list, pydantic validation and JSON decoding errors from a
+    malformed backend response are forwarded as well.
+
+    Apply it below ``@mcp.tool()`` on every tool. ``functools.wraps`` keeps the
+    signature and docstring the SDK reads to build the tool schema.
+    """
+
+    @functools.wraps(fn)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return await fn(*args, **kwargs)
+        except (ToolError, MCPError):
+            raise
+        except ANTICIPATED_TOOL_ERRORS as exc:
+            raise ToolError(str(exc) or type(exc).__name__) from exc
+
+    return wrapper
+
+
 # MCP Tools
 
 @mcp.tool()
+@surface_tool_errors
 async def search_my_sonarqube_projects(
     page: Annotated[str, Field(default="1", description="Page number to retrieve (1-indexed)")] = "1"
 ) -> SearchProjectsResponse:
@@ -269,6 +355,7 @@ async def search_my_sonarqube_projects(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def show_component(
     component: Annotated[str, Field(description="Project key or component key (e.g., 'my-project' or 'my-project:src/main.py')")],
     branch: Annotated[str | None, Field(default=None, description="Branch name to retrieve component from (e.g., 'main', 'develop')")] = None,
@@ -292,6 +379,7 @@ async def show_component(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def component_tree(
     component: Annotated[str, Field(description="Project key to traverse (e.g., 'my-project')")],
     qualifiers: Annotated[
@@ -354,6 +442,7 @@ async def component_tree(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def search_sonar_issues_in_projects(
     projects: Annotated[
         list[str] | None,
@@ -431,6 +520,7 @@ async def search_sonar_issues_in_projects(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def list_issue_authors(
     project: Annotated[
         str | None,
@@ -467,6 +557,7 @@ async def list_issue_authors(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def get_issue_changelog(
     issue: Annotated[str, Field(description="Issue key to retrieve history for (e.g., 'AXabc123def456')")]
 ) -> dict[str, Any]:
@@ -482,6 +573,7 @@ async def get_issue_changelog(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def list_issue_tags(
     project: Annotated[
         str | None,
@@ -517,6 +609,7 @@ async def list_issue_tags(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def get_project_quality_gate_status(
     analysisId: Annotated[
         str | None,
@@ -606,6 +699,7 @@ async def get_project_quality_gate_status(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def list_quality_gates() -> dict[str, Any]:
     """Enumerate all gates in the organization along with basic metadata and built-in flags.
 
@@ -619,6 +713,7 @@ async def list_quality_gates() -> dict[str, Any]:
 
 
 @mcp.tool()
+@surface_tool_errors
 async def show_quality_gate(
     name: Annotated[
         str | None,
@@ -658,6 +753,7 @@ async def show_quality_gate(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def search_quality_gates(
     gateId: Annotated[int, Field(description="Quality gate ID to search projects for. Get this from list_quality_gates()")],
     query: Annotated[
@@ -701,6 +797,7 @@ async def search_quality_gates(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def get_quality_gate_by_project(
     project: Annotated[str, Field(description="Project key to get quality gate for (e.g., 'my-project')")]
 ) -> dict[str, Any]:
@@ -720,6 +817,7 @@ async def get_quality_gate_by_project(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def search_hotspots(
     projectKey: Annotated[str, Field(description="Project key to search hotspots in (e.g., 'my-project')")],
     files: Annotated[
@@ -799,6 +897,7 @@ async def search_hotspots(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def show_hotspot(
     hotspot: Annotated[str, Field(description="Hotspot key to retrieve details for (e.g., 'AXabc123def456')")]
 ) -> HotspotDetails:
@@ -826,6 +925,7 @@ async def show_hotspot(
 
 
 @mcp.tool()
+@surface_tool_errors
 async def change_hotspot_status(
     hotspot: Annotated[str, Field(description="Hotspot key to change status for (e.g., 'AXabc123def456')")],
     status: Annotated[

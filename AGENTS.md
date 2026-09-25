@@ -13,7 +13,7 @@
 - `uv run ty check` runs the type checker on `src/`.
 
 ## Coding Style & Naming Conventions
-Target Python 3.11+ with four-space indentation, explicit type hints, and async-first request code. Keep the current single-server-file structure unless a change is large enough to justify extraction. Use `snake_case` for functions, variables, and tests; use `PascalCase` for Pydantic models. New MCP tool parameters should continue to use `pydantic.Field()` descriptions with explicit valid values and concrete examples where that improves agent usability.
+Target Python 3.11+ with four-space indentation, explicit type hints, and async-first request code. Keep the current single-server-file structure unless a change is large enough to justify extraction. Use `snake_case` for functions, variables, and tests; use `PascalCase` for Pydantic models. New MCP tool parameters should continue to use `pydantic.Field()` descriptions with explicit valid values and concrete examples where that improves agent usability. Stack `@surface_tool_errors` below `@mcp.tool()` on every tool: since mcp 2.1 the SDK hides the text of any exception other than `ToolError`, and the decorator re-raises the types in `ANTICIPATED_TOOL_ERRORS` (`ValueError`, `httpx.HTTPError`, `OSError`) as `ToolError` so the caller sees the reason.
 
 ## Testing Guidelines
 Tests rely on `pytest`, `pytest-asyncio`, and `pytest-httpx`, so new API behavior should be covered with mocked HTTP exchanges rather than live SonarCloud calls. Update `tests/test_server.py` whenever request parameters, response parsing, organization scoping, or hotspot status validation changes. Prefer asserting both the outbound request shape and the structured response model.
