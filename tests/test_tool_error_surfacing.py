@@ -135,7 +135,7 @@ async def test_client_sees_missing_token_message():
 
 @pytest.mark.asyncio
 async def test_client_sees_sonarcloud_http_error(monkeypatch, httpx_mock):
-    """An HTTP error status from SonarCloud reaches the caller with the status."""
+    """An HTTP error from SonarCloud reaches the caller with its status and reason."""
     monkeypatch.setenv("SONARCLOUD_TOKEN", "test-token")
     monkeypatch.setenv("SONARCLOUD_ORGANIZATION", "test-org")
     httpx_mock.add_response(
@@ -148,7 +148,28 @@ async def test_client_sees_sonarcloud_http_error(monkeypatch, httpx_mock):
         result = await client.call_tool("show_component", {"component": "missing"})
 
     assert result.is_error
+    assert result.content[0].text == (
+        "Error executing tool show_component: SonarCloud returned HTTP 404 Not Found: "
+        "Component key 'missing' not found"
+    )
+
+
+@pytest.mark.asyncio
+async def test_client_sees_status_line_without_error_body(monkeypatch, httpx_mock):
+    """Without SonarCloud's errors[] body the caller still gets httpx's status line."""
+    monkeypatch.setenv("SONARCLOUD_TOKEN", "test-token")
+    monkeypatch.setenv("SONARCLOUD_ORGANIZATION", "test-org")
+    httpx_mock.add_response(
+        url="https://sonarcloud.io/api/components/show?component=missing&organization=test-org",
+        status_code=502,
+        text="<html>Bad Gateway</html>",
+    )
+
+    async with Client(mcp) as client:
+        result = await client.call_tool("show_component", {"component": "missing"})
+
+    assert result.is_error
     assert result.content[0].text.startswith(
-        "Error executing tool show_component: Client error '404 Not Found' for url "
+        "Error executing tool show_component: Server error '502 Bad Gateway' for url "
         "'https://sonarcloud.io/api/components/show?component=missing&organization=test-org'"
     )

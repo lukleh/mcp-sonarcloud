@@ -30,8 +30,10 @@ VALID_HOTSPOT_RESOLUTIONS = {"FIXED", "SAFE", "ACKNOWLEDGED"}
 # Exception types the tools raise for failures the caller can act on: a missing
 # token or organization, a rejected argument, or an unreadable config value
 # (ValueError), an HTTP error status or transport failure from SonarCloud
-# (httpx.HTTPError), or a config file that cannot be read (OSError). Anything
-# else is a bug and stays a crash.
+# (httpx.HTTPError), or a config file that cannot be read (OSError). ValueError
+# also covers pydantic ValidationError and JSON decoding errors, so a malformed
+# response is forwarded to the caller rather than logged as a crash. Any other
+# exception is treated as a bug and stays a crash.
 ANTICIPATED_TOOL_ERRORS: tuple[type[Exception], ...] = (
     ValueError,
     httpx.HTTPError,
@@ -104,6 +106,43 @@ def get_config() -> dict[str, Any]:
     }
 
 
+def _sonar_error_messages(response: httpx.Response) -> list[str]:
+    """Return the ``errors[].msg`` texts SonarCloud puts in an error response body."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return []
+    errors = payload.get("errors") if isinstance(payload, dict) else None
+    if not isinstance(errors, list):
+        return []
+    return [
+        error["msg"]
+        for error in errors
+        if isinstance(error, dict) and isinstance(error.get("msg"), str)
+    ]
+
+
+def _raise_for_status(response: httpx.Response) -> None:
+    """Raise ``httpx.HTTPStatusError`` carrying SonarCloud's own reason when it gives one.
+
+    httpx's default message is only the status line and URL. SonarCloud explains
+    the failure in the body (an unknown component, a rejected parameter value),
+    so that text becomes the message the caller sees.
+    """
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        messages = _sonar_error_messages(response)
+        if not messages:
+            raise
+        raise httpx.HTTPStatusError(
+            f"SonarCloud returned HTTP {response.status_code} "
+            f"{response.reason_phrase}: {'; '.join(messages)}",
+            request=exc.request,
+            response=response,
+        ) from exc
+
+
 # HTTP Client helper
 async def make_request(
     endpoint: str,
@@ -149,7 +188,7 @@ async def make_request(
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
-        response.raise_for_status()
+        _raise_for_status(response)
 
         # Handle empty responses (common for successful POST operations)
         if not response.content or len(response.content) == 0:
@@ -256,8 +295,10 @@ def surface_tool_errors(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[
     protocol-level ``MCPError``) as a crash and replaces its text with the
     generic ``Error executing tool <name>``. The failures listed in
     ``ANTICIPATED_TOOL_ERRORS`` are re-raised as ``ToolError`` so the caller
-    sees the reason. Anything else keeps the SDK's crash handling: the text
-    stays on the server, logged with its traceback.
+    sees the reason. Any other exception keeps the SDK's crash handling: the
+    text stays on the server, logged with its traceback. Because ``ValueError``
+    is in the list, pydantic validation and JSON decoding errors from a
+    malformed backend response are forwarded as well.
 
     Apply it below ``@mcp.tool()`` on every tool. ``functools.wraps`` keeps the
     signature and docstring the SDK reads to build the tool schema.

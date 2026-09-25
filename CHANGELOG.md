@@ -9,23 +9,25 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- Narrowed the SDK dependency from `mcp>=2.0.0,<3` to `mcp>=2.2.0,<2.3`.
-  Fresh installs ignore `uv.lock` and resolve the newest version allowed, so
-  mcp 2.1.0 reached users untested and hid tool error messages. The cap now
-  admits only the minor the test suite runs against; raise it deliberately
-  after testing the next one.
 - Tool failures report their reason again under mcp 2.1 and later. The SDK
   now reports any exception other than `ToolError` as the generic
   `Error executing tool <name>`, which hid a missing token or organization,
   rejected arguments, HTTP errors from SonarCloud, and unreachable hosts.
   Anticipated failures (`ValueError`, `httpx.HTTPError`, `OSError`) are now
-  re-raised as `ToolError` at the tool boundary; programming errors keep the
+  re-raised as `ToolError` at the tool boundary; other exceptions keep the
   SDK's crash handling. Calling a tool function directly now raises
-  `ToolError` with the original exception as `__cause__`. The dev lockfile
-  now resolves mcp 2.2.0 so the test suite exercises it.
+  `ToolError` with the original exception as `__cause__`. HTTP errors now
+  carry SonarCloud's own `errors[].msg` text instead of only the status
+  line. The dev lockfile now resolves mcp 2.2.0 so the test suite exercises
+  it.
 
 ### Changed
 
+- Narrowed the SDK dependency from `mcp>=2.0.0,<3` to `mcp>=2.2.0,<2.3`.
+  Fresh installs ignore `uv.lock` and resolve the newest version allowed, so
+  mcp 2.1.0 reached users untested and hid tool error messages. The cap now
+  admits only the minor the test suite runs against; raise it deliberately
+  after testing the next one.
 - Dev tooling: CI now runs `ruff check src tests` in the test and publish
   workflows (previously no linter ran in CI; ruff was only a manual
   RELEASING.md gate), and the tree was moved to ruff 0.16's widened default

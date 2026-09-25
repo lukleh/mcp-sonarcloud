@@ -673,6 +673,7 @@ async def test_make_request_401_unauthorized(mock_env, httpx_mock):
     cause = exc_info.value.__cause__
     assert isinstance(cause, httpx.HTTPStatusError)
     assert cause.response.status_code == 401
+    assert str(exc_info.value) == "SonarCloud returned HTTP 401 Unauthorized: Unauthorized"
 
 
 @pytest.mark.asyncio
@@ -694,6 +695,7 @@ async def test_make_request_404_not_found(mock_env, httpx_mock):
     cause = exc_info.value.__cause__
     assert isinstance(cause, httpx.HTTPStatusError)
     assert cause.response.status_code == 404
+    assert str(exc_info.value) == "SonarCloud returned HTTP 404 Not Found: Hotspot not found"
 
 
 @pytest.mark.asyncio
@@ -715,6 +717,7 @@ async def test_make_request_500_server_error(mock_env, httpx_mock):
     cause = exc_info.value.__cause__
     assert isinstance(cause, httpx.HTTPStatusError)
     assert cause.response.status_code == 500
+    assert str(exc_info.value) == "SonarCloud returned HTTP 500 Internal Server Error: Internal server error"
 
 
 @pytest.mark.asyncio
@@ -736,6 +739,7 @@ async def test_make_request_403_forbidden(mock_env, httpx_mock):
     cause = exc_info.value.__cause__
     assert isinstance(cause, httpx.HTTPStatusError)
     assert cause.response.status_code == 403
+    assert str(exc_info.value) == "SonarCloud returned HTTP 403 Forbidden: Insufficient privileges"
 
 
 # Edge case tests
